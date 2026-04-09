@@ -1,0 +1,131 @@
+# =============================================================================
+# ORDER PLATFORM — Ambiente Local de Desenvolvimento
+# =============================================================================
+# Este ficheiro sobe toda a infraestrutura local necessária para desenvolver.
+# Os serviços Spring Boot correm fora do Docker (no teu IDE/terminal).
+#
+# Como usar:
+#   docker compose up -d          → sobe tudo em background
+#   docker compose down           → para e remove containers
+#   docker compose logs -f kafka  → ver logs do Kafka em tempo real
+#
+# Portas expostas:
+#   5432  → PostgreSQL
+#   9092  → Kafka (para as apps Spring Boot ligarem)
+#   8080  → Keycloak (auth server)
+#   8090  → Kafka UI (ver topics e mensagens no browser)
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # POSTGRESQL — Base de dados relacional
+  # ===========================================================================
+  # Cada microserviço tem a sua própria base de dados (database-per-service).
+  # Em produção seriam servidores separados; aqui usamos um só com múltiplas DBs.
+  postgres:
+    image: postgres:16-alpine
+    container_name: order-platform-postgres
+    environment:
+      POSTGRES_USER: orderplatform
+      POSTGRES_PASSWORD: orderplatform123
+      # Script de inicialização cria as DBs de cada serviço automaticamente
+      POSTGRES_MULTIPLE_DATABASES: orders_db,inventory_db,payments_db,notifications_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Script que cria múltiplas DBs ao iniciar (ver infra/postgres/)
+      - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orderplatform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # KAFKA — Message broker (event-driven communication)
+  # ===========================================================================
+  # Kafka em modo KRaft (sem Zookeeper) — padrão moderno desde Kafka 3.3+
+  # É aqui que os serviços publicam e consomem eventos:
+  #   order-service → publica "orders.order.created"
+  #   inventory-service → consome "orders.order.created", publica "inventory.reserved"
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: order-platform-kafka
+    environment:
+      # KRaft mode — Kafka gere o seu próprio metadata (sem Zookeeper)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      # PLAINTEXT://kafka:9092  → endereço interno (containers comunicam entre si)
+      # PLAINTEXT://localhost:9092 → endereço externo (apps Spring Boot no host)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Replicação 1 em local (produção usa 3)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ===========================================================================
+  # KAFKA UI — Interface visual para explorar topics e mensagens
+  # ===========================================================================
+  # Acede em: http://localhost:8090
+  # Podes ver em tempo real as mensagens trocadas entre serviços
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: order-platform-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8090:8080"
+
+  # ===========================================================================
+  # KEYCLOAK — Identity Provider (autenticação e autorização)
+  # ===========================================================================
+  # Emite tokens JWT que os serviços Spring Boot validam.
+  # Admin console: http://localhost:8080 (admin/admin)
+  # Os serviços Spring Boot têm spring.security.oauth2.resource-server.jwt.issuer-uri
+  # apontado para este Keycloak.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: order-platform-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: orderplatform
+      KC_DB_PASSWORD: orderplatform123
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    command: start-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+# ===========================================================================
+# VOLUMES — Persistência de dados entre restarts
+# ===========================================================================
+volumes:
+  postgres_data:
+    # Os dados do PostgreSQL sobrevivem a `docker compose down`
+    # Para apagar tudo: `docker compose down -v`

@@ -1,0 +1,39 @@
+# Build output
+**/build/
+**/target/
+**/.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+.vscode/
+*.class
+
+# Logs
+*.log
+logs/
+
+# Segredos — NUNCA commitar ficheiros com passwords ou API keys
+*.env
+.env
+.env.local
+application-local.yml
+application-secrets.yml
+*-secrets.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes locais
+infra/postgres/data/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+
+# Testcontainers
+.testcontainers.properties
