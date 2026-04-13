@@ -56,6 +56,12 @@ dependencies {
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
     implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.10.0")
 
+    // --- DOCUMENTAÇÃO ---
+    // SpringDoc OpenAPI: gera Swagger UI automaticamente a partir das anotações
+    // Aceder em: http://localhost:8081/swagger-ui.html
+    // JSON da spec: http://localhost:8081/v3/api-docs
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+
     // --- PRODUTIVIDADE ---
     // Lombok: @Data, @Builder, @RequiredArgsConstructor — elimina getters/setters boilerplate
     compileOnly("org.projectlombok:lombok")
