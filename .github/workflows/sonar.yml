@@ -56,6 +56,9 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Build, test and analyze
         run: |
           ./gradlew build sonar \
