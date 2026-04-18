@@ -1,11 +1,12 @@
 name: CI
 
 # =============================================================================
-# CI — Build + Test on every PR and push to integration branches
+# CI — Build + Test (GitHub Flow)
 # =============================================================================
+# GitHub Flow: one main branch + short-lived feature branches.
 # Triggers:
-#   pull_request → develop / main  : full gate before merge
-#   push         → develop / main  : verify integration is still green
+#   pull_request → main : full gate — must be green before merge
+#   push         → main : verify main stays green after merge
 #
 # GitHub Actions ubuntu-latest has Docker daemon running, so Testcontainers
 # integration tests (PostgreSQL + Kafka) work without any extra setup.
@@ -13,9 +14,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   push:
-    branches: [develop, main]
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}

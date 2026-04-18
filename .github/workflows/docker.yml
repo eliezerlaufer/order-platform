@@ -3,9 +3,8 @@ name: Docker Build & Push
 # =============================================================================
 # DOCKER — Build images and push to GitHub Container Registry (GHCR)
 # =============================================================================
-# Triggers:
-#   push to develop → builds all service images, tags with branch + SHA
-#   push to main    → same, also tags as :latest
+# GitHub Flow: triggers only on push to main (after PR is merged).
+# Every merge to main produces new images tagged with :main-<sha7> and :latest.
 #
 # Images published:
 #   ghcr.io/<owner>/order-platform/order-service:<tag>
@@ -18,7 +17,7 @@ name: Docker Build & Push
 
 on:
   push:
-    branches: [develop, main]
+    branches: [main]
   workflow_dispatch:   # allow manual trigger from GitHub UI
 
 concurrency:
@@ -121,10 +120,8 @@ jobs:
           echo "image=${IMAGE}" >> $GITHUB_OUTPUT
           echo "tag=${BRANCH}-${SHORT_SHA}" >> $GITHUB_OUTPUT
 
-          TAGS="${IMAGE}:${BRANCH}-${SHORT_SHA}"
-          if [ "$BRANCH" = "main" ]; then
-            TAGS="${TAGS},${IMAGE}:latest"
-          fi
+          # GitHub Flow: main is always the deployable branch → always tag :latest
+          TAGS="${IMAGE}:main-${SHORT_SHA},${IMAGE}:latest"
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Log in to GHCR

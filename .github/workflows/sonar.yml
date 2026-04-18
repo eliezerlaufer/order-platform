@@ -1,7 +1,7 @@
 name: SonarCloud Analysis
 
 # =============================================================================
-# SONAR — static analysis + code coverage on PRs and develop/main
+# SONAR — static analysis + code coverage (GitHub Flow)
 # =============================================================================
 # Required GitHub Secrets (Settings → Secrets → Actions):
 #   SONAR_TOKEN       → generate at sonarcloud.io → My Account → Security
@@ -9,14 +9,13 @@ name: SonarCloud Analysis
 #   SONAR_PROJECT_KEY → usually "<org>_order-platform"
 #
 # SonarCloud is FREE for public repositories.
-# For private repos: free tier includes 14 days trial.
 # =============================================================================
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 concurrency:
   group: sonar-${{ github.ref }}
