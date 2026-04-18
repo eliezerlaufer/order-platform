@@ -1,32 +1,83 @@
+# =============================================================================
+# NOTIFICATION-SERVICE — Configuração da aplicação
+# =============================================================================
+# Consome eventos de orders, payments e inventory e persiste notificações.
+# Puro consumidor Kafka — sem produtor, sem outbox.
+# =============================================================================
+
 spring:
   application:
     name: notification-service
+
+  # ---------------------------------------------------------------------------
+  # BASE DE DADOS
+  # ---------------------------------------------------------------------------
   datasource:
     url: jdbc:postgresql://localhost:5432/notifications_db
     username: orderplatform
     password: orderplatform123
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  # ---------------------------------------------------------------------------
+  # JPA / HIBERNATE
+  # ---------------------------------------------------------------------------
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # ---------------------------------------------------------------------------
+  # FLYWAY
+  # ---------------------------------------------------------------------------
   flyway:
     enabled: true
     locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # ---------------------------------------------------------------------------
+  # KAFKA
+  # ---------------------------------------------------------------------------
   kafka:
     bootstrap-servers: localhost:9092
+
     consumer:
       group-id: notification-service
       auto-offset-reset: earliest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
-        spring.json.trusted.packages: "pt.orderplatform.*"
+        isolation.level: read_committed
 
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+
+  # ---------------------------------------------------------------------------
+  # SEGURANÇA
+  # ---------------------------------------------------------------------------
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/order-platform
+
+# ---------------------------------------------------------------------------
+# SERVER
+# ---------------------------------------------------------------------------
 server:
   port: 8084
 
+# ---------------------------------------------------------------------------
+# ACTUATOR
+# ---------------------------------------------------------------------------
 management:
   endpoints:
     web:
@@ -34,9 +85,22 @@ management:
         include: health,info,metrics,prometheus
   endpoint:
     health:
+      show-details: always
       probes:
         enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
 
+# ---------------------------------------------------------------------------
+# LOGGING
+# ---------------------------------------------------------------------------
 logging:
   level:
     pt.orderplatform: DEBUG
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [traceId=%X{traceId}] %-5level %logger{36} - %msg%n"
