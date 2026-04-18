@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -99,7 +99,7 @@ jobs:
             port: 8084
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Download the JARs built in the previous job
       - name: Download JARs
