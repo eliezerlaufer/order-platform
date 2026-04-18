@@ -1,0 +1,85 @@
+name: CI
+
+# =============================================================================
+# CI — Build + Test on every PR and push to integration branches
+# =============================================================================
+# Triggers:
+#   pull_request → develop / main  : full gate before merge
+#   push         → develop / main  : verify integration is still green
+#
+# GitHub Actions ubuntu-latest has Docker daemon running, so Testcontainers
+# integration tests (PostgreSQL + Kafka) work without any extra setup.
+# =============================================================================
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true   # cancel stale runs when new commits are pushed
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # BUILD & TEST — one job, all services
+  # ---------------------------------------------------------------------------
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout full history (needed for SonarCloud blame data later)
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Java 21 (Temurin = Eclipse Adoptium, the industry default)
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 3. Gradle cache — key on all .kts files + wrapper properties
+      #    Speeds up subsequent runs from ~3 min to ~30 sec
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4. Compile all services (fast feedback — fail before running tests)
+      - name: Compile
+        run: ./gradlew compileJava compileTestJava --no-daemon --parallel
+
+      # 5. Run all tests (unit + integration via Testcontainers)
+      #    Docker daemon is available on ubuntu-latest runners.
+      - name: Test
+        run: ./gradlew test --no-daemon --parallel
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"   # avoid privilege issues on CI
+
+      # 6. Upload test reports as artifacts (visible in GitHub Actions UI)
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()   # upload even on failure so you can debug
+        with:
+          name: test-reports-${{ github.run_number }}
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+      # 7. Upload coverage data (used by SonarCloud job if configured)
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ github.run_number }}
+          path: '**/build/reports/jacoco/'
+          retention-days: 7

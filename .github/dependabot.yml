@@ -1,0 +1,47 @@
+version: 2
+
+updates:
+  # =========================================================================
+  # GRADLE — all services share the root BOM so most bumps happen here
+  # =========================================================================
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: "Europe/Lisbon"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - gradle
+    groups:
+      # Group Spring Boot + all Spring libs into one PR (they must move together)
+      spring:
+        patterns:
+          - "org.springframework*"
+          - "io.spring*"
+      # Group all Testcontainers modules
+      testcontainers:
+        patterns:
+          - "org.testcontainers*"
+      # Group OpenTelemetry
+      otel:
+        patterns:
+          - "io.opentelemetry*"
+          - "io.micrometer*"
+
+  # =========================================================================
+  # GITHUB ACTIONS — keep action versions up to date
+  # =========================================================================
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: "Europe/Lisbon"
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - github-actions
