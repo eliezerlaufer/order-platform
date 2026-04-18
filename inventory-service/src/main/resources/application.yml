@@ -1,42 +1,100 @@
+# =============================================================================
+# INVENTORY-SERVICE — Configuração da aplicação
+# =============================================================================
+# Consome eventos do order-service (orders.order.created / cancelled) e do
+# payment-service (payments.payment.failed), gerindo reservas de stock e
+# publicando eventos próprios via outbox.
+# =============================================================================
+
 spring:
   application:
     name: inventory-service
+
+  # ---------------------------------------------------------------------------
+  # BASE DE DADOS
+  # ---------------------------------------------------------------------------
   datasource:
     url: jdbc:postgresql://localhost:5432/inventory_db
     username: orderplatform
     password: orderplatform123
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  # ---------------------------------------------------------------------------
+  # JPA / HIBERNATE
+  # ---------------------------------------------------------------------------
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # ---------------------------------------------------------------------------
+  # FLYWAY
+  # ---------------------------------------------------------------------------
   flyway:
     enabled: true
     locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # ---------------------------------------------------------------------------
+  # KAFKA
+  # ---------------------------------------------------------------------------
   kafka:
     bootstrap-servers: localhost:9092
+
+    # Produtor — publicação de eventos do outbox
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # Usamos StringSerializer no value porque o payload JSON já vem serializado
+      # da tabela outbox_events (coluna jsonb → String)
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
       retries: 3
+      properties:
+        enable.idempotence: true
+
+    # Consumidor — consome eventos dos outros serviços
     consumer:
       group-id: inventory-service
       auto-offset-reset: earliest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # Value como String — parsing de JSON feito manualmente pelo listener
+      # (permite-nos validar eventId e extrair só os campos de que precisamos)
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
-        spring.json.trusted.packages: "pt.orderplatform.*"
+        isolation.level: read_committed
+
+    # Ack manual após a transação do listener commitar (evita perder mensagens
+    # se a app crashar entre o processamento e o ack).
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+
+  # ---------------------------------------------------------------------------
+  # SEGURANÇA
+  # ---------------------------------------------------------------------------
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8080/realms/order-platform
 
+# ---------------------------------------------------------------------------
+# SERVER
+# ---------------------------------------------------------------------------
 server:
   port: 8082
 
+# ---------------------------------------------------------------------------
+# ACTUATOR
+# ---------------------------------------------------------------------------
 management:
   endpoints:
     web:
@@ -44,6 +102,7 @@ management:
         include: health,info,metrics,prometheus
   endpoint:
     health:
+      show-details: always
       probes:
         enabled: true
   health:
@@ -52,6 +111,13 @@ management:
     readinessState:
       enabled: true
 
+# ---------------------------------------------------------------------------
+# LOGGING
+# ---------------------------------------------------------------------------
 logging:
   level:
     pt.orderplatform: DEBUG
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [traceId=%X{traceId}] %-5level %logger{36} - %msg%n"

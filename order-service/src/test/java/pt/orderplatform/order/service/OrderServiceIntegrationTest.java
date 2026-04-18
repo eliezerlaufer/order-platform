@@ -1,5 +1,7 @@
 package pt.orderplatform.order.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -43,6 +45,9 @@ class OrderServiceIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private OutboxEventRepository outboxEventRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private UUID customerId;
     private CreateOrderRequest validRequest;
@@ -126,6 +131,35 @@ class OrderServiceIntegrationTest extends BaseIntegrationTest {
             assertThat(event.getEventType()).isEqualTo("OrderCreated");
             assertThat(event.getAggregateType()).isEqualTo("Order");
             assertThat(event.isPublished()).isFalse();
+        }
+
+        @Test
+        @DisplayName("payload do outbox deve incluir eventId, orderId e items — contrato consumido pelo inventory-service")
+        void outboxPayloadShouldIncludeEventIdAndItems() throws Exception {
+            OrderResponse response = orderService.createOrder(customerId, validRequest);
+
+            var pendingEvents = outboxEventRepository.findByPublishedFalseOrderByCreatedAtAsc();
+            var event = pendingEvents.stream()
+                    .filter(e -> e.getAggregateId().equals(response.id()))
+                    .findFirst()
+                    .orElseThrow();
+
+            JsonNode payload = objectMapper.readTree(event.getPayload());
+
+            // eventId — UUID único para idempotência no consumer
+            assertThat(payload.get("eventId")).isNotNull();
+            assertThat(UUID.fromString(payload.get("eventId").asText())).isNotNull();
+
+            // orderId
+            assertThat(payload.get("orderId").asText()).isEqualTo(response.id().toString());
+
+            // items — necessário para o inventory-service reservar stock
+            JsonNode items = payload.get("items");
+            assertThat(items).isNotNull();
+            assertThat(items.isArray()).isTrue();
+            assertThat(items).hasSize(2);
+            assertThat(items.get(0).get("productId").asText()).isNotBlank();
+            assertThat(items.get(0).get("quantity").asInt()).isPositive();
         }
 
         @Test

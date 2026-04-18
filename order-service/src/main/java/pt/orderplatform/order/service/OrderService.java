@@ -150,21 +150,45 @@ public class OrderService {
     // =========================================================================
     // Chamado sempre que algo muda no pedido e precisa de notificar outros serviços.
     // O payload é serializado para JSON aqui mesmo.
+    //
+    // Campos do payload:
+    //   eventId     → UUID único por evento, usado pelos consumidores para
+    //                 idempotência (detectar entregas duplicadas do Kafka).
+    //   orderId     → ID do pedido (aggregate).
+    //   customerId  → dono do pedido (útil para notification-service).
+    //   status      → estado do pedido no momento do evento.
+    //   totalAmount → valor total (útil para payment-service).
+    //   items       → lista de {productId, quantity} — necessário para o
+    //                 inventory-service reservar stock.
     // =========================================================================
     private void saveOutboxEvent(Order order, String eventType) {
         try {
-            // Payload mínimo com a informação essencial do evento
-            String payload = objectMapper.writeValueAsString(Map.of(
-                    "orderId", order.getId().toString(),
-                    "customerId", order.getCustomerId().toString(),
-                    "status", order.getStatus().name(),
-                    "totalAmount", order.getTotalAmount()
-            ));
+            String eventId = UUID.randomUUID().toString();
+
+            // Snapshot dos items em formato serializável — inventory-service consome isto
+            List<Map<String, Object>> itemsPayload = order.getItems().stream()
+                    .map(item -> Map.<String, Object>of(
+                            "productId", item.getProductId().toString(),
+                            "quantity", item.getQuantity()
+                    ))
+                    .toList();
+
+            // LinkedHashMap preserva a ordem dos campos no JSON (legibilidade em logs)
+            Map<String, Object> payloadMap = new java.util.LinkedHashMap<>();
+            payloadMap.put("eventId", eventId);
+            payloadMap.put("orderId", order.getId().toString());
+            payloadMap.put("customerId", order.getCustomerId().toString());
+            payloadMap.put("status", order.getStatus().name());
+            payloadMap.put("totalAmount", order.getTotalAmount());
+            payloadMap.put("items", itemsPayload);
+
+            String payload = objectMapper.writeValueAsString(payloadMap);
 
             OutboxEvent event = OutboxEvent.of("Order", order.getId(), eventType, payload);
             outboxEventRepository.save(event);
 
-            log.debug("Outbox event {} created for order {}", eventType, order.getId());
+            log.debug("Outbox event {} (eventId={}) created for order {}",
+                    eventType, eventId, order.getId());
         } catch (JsonProcessingException e) {
             // Nunca deve acontecer com tipos simples, mas obrigatório tratar
             throw new RuntimeException("Failed to serialize outbox event payload", e);
