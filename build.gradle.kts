@@ -50,10 +50,8 @@ subprojects {
             mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.0")
         }
         dependencies {
-            // Testcontainers — para testes de integração com DB/Kafka reais
-            dependency("org.testcontainers:testcontainers-bom:1.20.4")
             // OpenTelemetry — traces distribuídos
-            dependency("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.10.0")
+            dependency("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.26.1")
         }
     }
 

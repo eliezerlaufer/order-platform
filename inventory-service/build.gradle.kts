@@ -48,7 +48,7 @@ dependencies {
     // --- OBSERVABILIDADE ---
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.10.0")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.26.1")
 
     // --- DOCUMENTAÇÃO ---
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
@@ -63,9 +63,10 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
-    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
-    testImplementation("org.testcontainers:postgresql:1.20.4")
-    testImplementation("org.testcontainers:kafka:1.20.4")
+    testImplementation("org.testcontainers:testcontainers:2.0.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
+    testImplementation("org.testcontainers:postgresql:1.21.4")
+    testImplementation("org.testcontainers:kafka:1.21.4")
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

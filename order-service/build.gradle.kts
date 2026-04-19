@@ -54,7 +54,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     // Micrometer Tracing com bridge OpenTelemetry: traces distribuídos entre serviços
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.10.0")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.26.1")
 
     // --- DOCUMENTAÇÃO ---
     // SpringDoc OpenAPI: gera Swagger UI automaticamente a partir das anotações
@@ -78,9 +78,10 @@ dependencies {
     testImplementation("org.springframework.kafka:spring-kafka-test")
     // Testcontainers: sobe um PostgreSQL REAL num container Docker durante os testes
     // Garante que os testes testam contra a DB real, não mocks
-    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
-    testImplementation("org.testcontainers:postgresql:1.20.4")
-    testImplementation("org.testcontainers:kafka:1.20.4")
+    testImplementation("org.testcontainers:testcontainers:2.0.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
+    testImplementation("org.testcontainers:postgresql:1.21.4")
+    testImplementation("org.testcontainers:kafka:1.21.4")
     // Lombok nos testes também
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")

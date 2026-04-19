@@ -56,18 +56,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 4. Compile all services (fast feedback — fail before running tests)
+      # 4. Ensure gradlew is executable (git on Windows strips the +x bit)
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 5. Compile all services (fast feedback — fail before running tests)
       - name: Compile
         run: ./gradlew compileJava compileTestJava --no-daemon --parallel
 
-      # 5. Run all tests (unit + integration via Testcontainers)
+      # 6. Run all tests (unit + integration via Testcontainers)
       #    Docker daemon is available on ubuntu-latest runners.
       - name: Test
         run: ./gradlew test --no-daemon --parallel
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"   # avoid privilege issues on CI
 
-      # 6. Upload test reports as artifacts (visible in GitHub Actions UI)
+      # 7. Upload test reports as artifacts (visible in GitHub Actions UI)
       - name: Upload test reports
         uses: actions/upload-artifact@v4
         if: always()   # upload even on failure so you can debug
@@ -76,7 +80,7 @@ jobs:
           path: '**/build/reports/tests/'
           retention-days: 7
 
-      # 7. Upload coverage data (used by SonarCloud job if configured)
+      # 8. Upload coverage data (used by SonarCloud job if configured)
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         if: always()
