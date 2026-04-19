@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -59,6 +61,7 @@ public class Order {
     // Nunca usar EnumType.ORDINAL (guarda 0, 1, 2...) — frágil se a ordem mudar
     // -------------------------------------------------------------------------
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "status", nullable = false)
     @Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
@@ -125,9 +128,9 @@ public class Order {
         this.updatedAt = OffsetDateTime.now();
     }
 
-    // Cancelar o pedido
+    // Cancelar o pedido — só permite cancelar se estiver PENDING ou CONFIRMED
     public void cancel() {
-        if (this.status == OrderStatus.SHIPPED || this.status == OrderStatus.DELIVERED) {
+        if (this.status != OrderStatus.PENDING && this.status != OrderStatus.CONFIRMED) {
             throw new IllegalStateException("Cannot cancel order in status: " + this.status);
         }
         this.status = OrderStatus.CANCELLED;

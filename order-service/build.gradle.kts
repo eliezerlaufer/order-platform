@@ -78,9 +78,10 @@ dependencies {
     testImplementation("org.springframework.kafka:spring-kafka-test")
     // Testcontainers: sobe um PostgreSQL REAL num container Docker durante os testes
     // Garante que os testes testam contra a DB real, não mocks
-    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
-    testImplementation("org.testcontainers:postgresql:1.20.4")
-    testImplementation("org.testcontainers:kafka:1.20.4")
+    testImplementation("org.testcontainers:testcontainers:2.0.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
+    testImplementation("org.testcontainers:postgresql:1.21.4")
+    testImplementation("org.testcontainers:kafka:1.21.4")
     // Lombok nos testes também
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")

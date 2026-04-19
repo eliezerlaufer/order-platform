@@ -25,10 +25,8 @@ jobs:
   sonar:
     name: SonarCloud
     runs-on: ubuntu-latest
-
-    # Do not fail the PR if Sonar is not configured yet (no SONAR_TOKEN)
-    # Remove this once you've set up SonarCloud
-    if: ${{ vars.SONAR_ENABLED == 'true' || github.ref == 'refs/heads/main' }}
+    # Skip entirely if SONAR_TOKEN secret is not configured yet — won't block PRs
+    if: ${{ secrets.SONAR_TOKEN != '' }}
 
     steps:
       - name: Checkout (full history for blame)
@@ -51,7 +49,6 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      # Cache SonarCloud analysis data (avoids re-downloading rules on every run)
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
         with:
@@ -59,8 +56,9 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      # Build + test + generate JaCoCo coverage reports + run Sonar analysis
-      # All in one Gradle invocation so Sonar picks up coverage data.
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Build, test and analyze
         run: |
           ./gradlew build sonar \
@@ -70,11 +68,11 @@ jobs:
             -Dsonar.organization=${{ secrets.SONAR_ORG }} \
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # enables PR decoration
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TESTCONTAINERS_RYUK_DISABLED: "true"
 
       - name: Summary
         if: always()
         run: |
-          echo "### SonarCloud Analysis Complete 🔍" >> $GITHUB_STEP_SUMMARY
-          echo "View results at: https://sonarcloud.io" >> $GITHUB_STEP_SUMMARY
+          echo "### SonarCloud Analysis Complete" >> $GITHUB_STEP_SUMMARY
+          echo "View results at: https://sonarcloud.io/project/overview?id=${{ secrets.SONAR_PROJECT_KEY }}" >> $GITHUB_STEP_SUMMARY

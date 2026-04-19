@@ -54,6 +54,9 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Build all bootJars (skip tests — already run by CI)
         run: |
           ./gradlew :order-service:bootJar \

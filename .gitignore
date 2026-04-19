@@ -39,3 +39,4 @@ frontend/.next/
 .testcontainers.properties
 
 .serena/
+.token-optimizer/
