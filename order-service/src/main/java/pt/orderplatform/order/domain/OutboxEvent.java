@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -58,7 +60,8 @@ public class OutboxEvent {
     private String eventType;
 
     // Conteúdo do evento em JSON (serializado)
-    // @Column(columnDefinition = "jsonb") → diz ao Hibernate o tipo exato na DB
+    // @JdbcTypeCode(SqlTypes.JSON) → Hibernate envia como tipo JSON nativo do PostgreSQL
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
     private String payload;
 

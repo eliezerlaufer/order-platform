@@ -5,27 +5,27 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 // =============================================================================
 // BASE INTEGRATION TEST — PostgreSQL + Kafka reais via Testcontainers
 // =============================================================================
-@Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class BaseIntegrationTest {
 
-    @Container
     static final PostgreSQLContainer<?> postgres =
             new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
                     .withDatabaseName("payments_db_test")
                     .withUsername("test")
                     .withPassword("test");
 
-    @Container
     static final KafkaContainer kafka =
             new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+
+    static {
+        postgres.start();
+        kafka.start();
+    }
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
@@ -38,5 +38,8 @@ public abstract class BaseIntegrationTest {
         // Desactiva autenticação JWT real nos testes
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
                 () -> "http://localhost:9999/realms/test");
+
+        // Desactivar OpenTelemetry nos testes — sem collector local
+        registry.add("otel.sdk.disabled", () -> "true");
     }
 }
