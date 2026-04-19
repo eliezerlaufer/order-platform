@@ -51,7 +51,7 @@ subprojects {
         }
         dependencies {
             // OpenTelemetry — traces distribuídos
-            dependency("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.10.0")
+            dependency("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.26.1")
         }
     }
 

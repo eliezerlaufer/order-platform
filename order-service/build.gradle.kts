@@ -54,7 +54,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     // Micrometer Tracing com bridge OpenTelemetry: traces distribuídos entre serviços
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.10.0")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.26.1")
 
     // --- DOCUMENTAÇÃO ---
     // SpringDoc OpenAPI: gera Swagger UI automaticamente a partir das anotações

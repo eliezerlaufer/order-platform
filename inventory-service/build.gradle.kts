@@ -48,7 +48,7 @@ dependencies {
     // --- OBSERVABILIDADE ---
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.10.0")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.26.1")
 
     // --- DOCUMENTAÇÃO ---
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
