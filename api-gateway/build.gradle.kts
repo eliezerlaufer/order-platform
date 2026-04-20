@@ -21,6 +21,8 @@ extra["springCloudVersion"] = "2025.0.2"
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	// Prometheus: expõe /actuator/prometheus para scraping
+	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 	implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc")
 	compileOnly("org.projectlombok:lombok")

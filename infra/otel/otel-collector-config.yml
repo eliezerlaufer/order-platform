@@ -1,0 +1,47 @@
+# =============================================================================
+# OPENTELEMETRY COLLECTOR — Configuração
+# =============================================================================
+# Recebe traces das apps Spring Boot (porta 4317 gRPC / 4318 HTTP)
+# e reencaminha para o Jaeger (traces).
+#
+# As métricas não passam aqui — são scrapeadas diretamente pelo Prometheus
+# via /actuator/prometheus de cada serviço.
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317   # apps Spring Boot enviam traces aqui
+      http:
+        endpoint: 0.0.0.0:4318   # alternativa HTTP/protobuf
+
+processors:
+  batch:
+    # Agrupa spans antes de exportar — reduz overhead de rede
+    timeout: 1s
+    send_batch_size: 1024
+
+  memory_limiter:
+    # Proteção contra OOM — descarta dados se usar > 80% do limite
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+exporters:
+  otlp/jaeger:
+    # Jaeger All-in-One aceita traces via OTLP gRPC (porta 4317)
+    endpoint: jaeger:4317
+    tls:
+      insecure: true   # sem TLS em ambiente local
+
+  debug:
+    # Útil para debugging — imprime spans recebidos nos logs do collector
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/jaeger, debug]

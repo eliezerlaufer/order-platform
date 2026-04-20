@@ -55,6 +55,8 @@ dependencies {
     // Micrometer Tracing com bridge OpenTelemetry: traces distribuídos entre serviços
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
     implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.26.1")
+    // Prometheus: expõe /actuator/prometheus para scraping
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
     // --- DOCUMENTAÇÃO ---
     // SpringDoc OpenAPI: gera Swagger UI automaticamente a partir das anotações

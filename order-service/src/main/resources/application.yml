@@ -125,3 +125,21 @@ logging:
   pattern:
     # Formato com trace ID para correlacionar logs entre serviços
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [traceId=%X{traceId}] %-5level %logger{36} - %msg%n"
+
+# ---------------------------------------------------------------------------
+# OPENTELEMETRY — Traces distribuídos
+# ---------------------------------------------------------------------------
+# otel.* é o namespace correto do opentelemetry-spring-boot-starter
+# Não usar management.otlp.* (esse é do Micrometer OTLP, diferente)
+otel:
+  service:
+    name: order-service
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317   # OTel Collector (gRPC)
+  traces:
+    exporter: otlp    # envia traces para o OTel Collector → Jaeger
+  metrics:
+    exporter: none    # métricas via /actuator/prometheus (evita duplicados)
+  logs:
+    exporter: none    # logs via stdout / logback
