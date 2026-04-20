@@ -1,22 +1,7 @@
-import { createContext, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import keycloak from './keycloak'
 import { setAuthToken, clearAuthToken } from '@/api/client'
-
-interface AuthContextValue {
-  isAuthenticated: boolean
-  isLoading: boolean
-  userId: string | undefined
-  username: string | undefined
-  logout: () => void
-}
-
-export const AuthContext = createContext<AuthContextValue>({
-  isAuthenticated: false,
-  isLoading: true,
-  userId: undefined,
-  username: undefined,
-  logout: () => {},
-})
+import { AuthContext } from './AuthContext'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
