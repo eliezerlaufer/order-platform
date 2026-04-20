@@ -49,7 +49,7 @@ dependencies {
     implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.26.1")
 
     // --- DOCUMENTAÇÃO ---
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // --- PRODUTIVIDADE ---
     compileOnly("org.projectlombok:lombok")

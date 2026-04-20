@@ -60,7 +60,7 @@ dependencies {
     // SpringDoc OpenAPI: gera Swagger UI automaticamente a partir das anotações
     // Aceder em: http://localhost:8081/swagger-ui.html
     // JSON da spec: http://localhost:8081/v3/api-docs
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     // --- PRODUTIVIDADE ---
     // Lombok: @Data, @Builder, @RequiredArgsConstructor — elimina getters/setters boilerplate
