@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import pt.orderplatform.order.domain.OrderStatus;
 import pt.orderplatform.order.dto.CreateOrderRequest;
 import pt.orderplatform.order.dto.OrderResponse;
 import pt.orderplatform.order.service.OrderService;
@@ -88,7 +89,27 @@ public class OrderController {
             @PathVariable UUID id,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
 
-        return ResponseEntity.ok(orderService.getOrderById(id));
+        UUID customerId = extractCustomerId(jwt);
+        return ResponseEntity.ok(orderService.getOrderByIdForCustomer(id, customerId));
+    }
+
+    // =========================================================================
+    // GET /api/orders/{id}/status — Consultar estado do pedido
+    // =========================================================================
+    @Operation(summary = "Consultar estado do pedido")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado do pedido"),
+        @ApiResponse(responseCode = "404", description = "Pedido não encontrado ou não pertence ao cliente"),
+        @ApiResponse(responseCode = "401", description = "Token JWT em falta ou inválido")
+    })
+    @GetMapping("/{id}/status")
+    public ResponseEntity<OrderStatus> getOrderStatus(
+            @PathVariable UUID id,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+
+        UUID customerId = extractCustomerId(jwt);
+        OrderResponse order = orderService.getOrderByIdForCustomer(id, customerId);
+        return ResponseEntity.ok(order.status());
     }
 
     // =========================================================================
