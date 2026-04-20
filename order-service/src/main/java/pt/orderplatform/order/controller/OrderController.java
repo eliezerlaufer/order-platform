@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import pt.orderplatform.order.domain.OrderStatus;
 import pt.orderplatform.order.dto.CreateOrderRequest;
 import pt.orderplatform.order.dto.OrderResponse;
 import pt.orderplatform.order.service.OrderService;
@@ -88,7 +89,20 @@ public class OrderController {
             @PathVariable UUID id,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
 
-        return ResponseEntity.ok(orderService.getOrderById(id));
+        UUID customerId = extractCustomerId(jwt);
+        return ResponseEntity.ok(orderService.getOrderByIdForCustomer(id, customerId));
+    }
+
+    // =========================================================================
+    // GET /api/orders/{id}/status — Consultar estado do pedido
+    // =========================================================================
+    @GetMapping("/{id}/status")
+    public ResponseEntity<OrderStatus> getOrderStatus(
+            @PathVariable UUID id,
+            @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
+
+        OrderResponse order = orderService.getOrderById(id);
+        return ResponseEntity.ok(order.status());
     }
 
     // =========================================================================

@@ -118,6 +118,20 @@ public class OrderService {
     }
 
     // =========================================================================
+    // BUSCAR PEDIDO POR ID (com verificação de dono)
+    // =========================================================================
+    public OrderResponse getOrderByIdForCustomer(UUID orderId, UUID customerId) {
+        Order order = orderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
+
+        if (order.getCustomerId().equals(customerId)) {
+            throw new OrderCancellationException(orderId, order.getStatus());
+        }
+
+        return OrderResponse.from(order);
+    }
+
+    // =========================================================================
     // CANCELAR PEDIDO
     // =========================================================================
     @Transactional
