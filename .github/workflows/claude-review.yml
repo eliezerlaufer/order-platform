@@ -1,0 +1,85 @@
+name: Claude PR Review
+
+# =============================================================================
+# CLAUDE — Revisão automática de Pull Requests
+# =============================================================================
+# Claude analisa o diff do PR e publica comentários inline na UI do GitHub.
+# Não aprova nem rejeita — só revê (sem write permission em pull-requests).
+#
+# Dois modos de uso:
+#   1. Automático: dispara em todo PR aberto/atualizado contra main
+#   2. Manual:     qualquer pessoa escreve "@claude review" num comentário
+#
+# Secret necessário (Settings → Secrets → Actions):
+#   ANTHROPIC_API_KEY → gera em console.anthropic.com → API Keys
+# =============================================================================
+
+on:
+  # Automático — revê todo PR logo que é aberto ou atualizado
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+  # Manual — "@claude review" num comentário do PR
+  issue_comment:
+    types: [created]
+
+# Não correr duas revisões em paralelo para o mesmo PR
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Claude Review
+    runs-on: ubuntu-latest
+
+    # Só corre se:
+    #  - for um pull_request event  OU
+    #  - for um comentário numa issue/PR que contenha "@claude"
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       contains(github.event.comment.body, '@claude'))
+
+    permissions:
+      contents: read          # ler o código
+      pull-requests: write    # publicar comentários no PR
+
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Instrução enviada ao Claude para cada revisão
+          direct_prompt: |
+            Revê este Pull Request como um senior engineer experiente.
+            O projeto é um sistema de microserviços Java 21 + Spring Boot 3
+            com um frontend React 18 + TypeScript.
+
+            Foca-te em:
+            - Correctness: lógica incorrecta, edge cases não tratados, race conditions
+            - Segurança: injecção SQL, XSS, segredos hardcoded, autenticação/autorização
+            - Padrões do projecto: Outbox pattern, idempotência Kafka (ProcessedEvent),
+              baseline-on-migrate ausente no Flyway, imutabilidade nos DTOs
+            - Testes: cobertura adequada, Testcontainers nos testes de integração
+            - TypeScript: type safety, sem `any` implícito, hooks bem definidos
+
+            Para cada problema encontrado:
+            - Indica o ficheiro e linha exacta
+            - Explica claramente o problema
+            - Sugere a correcção com código quando possível
+
+            Categoriza cada comentário como:
+            - 🔴 CRÍTICO: bug ou vulnerabilidade de segurança — deve ser corrigido antes do merge
+            - 🟡 AVISO: problema de qualidade importante mas não bloqueante
+            - 💡 SUGESTÃO: melhoria opcional, boas práticas, legibilidade
+
+            No final publica um resumo com:
+            - Nº de problemas por categoria
+            - Avaliação geral (aprovado para merge / necessita revisão)
+
+          # Publica como review formal do GitHub (aparece na aba "Files changed")
+          # false → publica como comentário normal no PR
+          post_as_review: true
