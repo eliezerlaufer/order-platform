@@ -146,6 +146,32 @@ public class OrderService {
     }
 
     // =========================================================================
+    // SAGA — Confirmar pedido (chamado pelo SagaEventListener)
+    // =========================================================================
+    @Transactional
+    public void confirmOrderBySaga(UUID orderId) {
+        Order order = orderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
+        order.confirm();
+        orderRepository.save(order);
+        saveOutboxEvent(order, "OrderConfirmed");
+        log.info("Order {} confirmed by saga", orderId);
+    }
+
+    // =========================================================================
+    // SAGA — Cancelar pedido (chamado pelo SagaEventListener)
+    // =========================================================================
+    @Transactional
+    public void cancelOrderBySaga(UUID orderId) {
+        Order order = orderRepository.findByIdWithItems(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
+        order.cancel();
+        orderRepository.save(order);
+        saveOutboxEvent(order, "OrderCancelled");
+        log.info("Order {} cancelled by saga", orderId);
+    }
+
+    // =========================================================================
     // MÉTODO PRIVADO — Guardar evento no Outbox
     // =========================================================================
     // Chamado sempre que algo muda no pedido e precisa de notificar outros serviços.

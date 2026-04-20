@@ -57,7 +57,8 @@ spring:
     # Produtor — como este serviço publica eventos
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # StringSerializer porque o payload já é JSON string vindo da tabela outbox
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all          # aguarda confirmação de todos os replicas (mais seguro)
       retries: 3         # tenta 3x antes de falhar
       properties:
@@ -69,10 +70,14 @@ spring:
       auto-offset-reset: earliest      # começa do início se não houver offset guardado
       enable-auto-commit: false        # NÓS controlamos o commit (após processamento)
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # StringDeserializer — parse manual com ObjectMapper no listener
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       properties:
-        spring.json.trusted.packages: "pt.orderplatform.*"
         isolation.level: read_committed  # não lê mensagens de transações incompletas
+
+    # Ack manual após processamento bem-sucedido
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
 
   # ---------------------------------------------------------------------------
   # SEGURANÇA — OAuth2 com Keycloak
