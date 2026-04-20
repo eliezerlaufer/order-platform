@@ -121,5 +121,28 @@ services:
       retries: 10
       start_period: 60s
 
+  # ===========================================================================
+  # FRONTEND — React 18 + Vite SPA servida via nginx
+  # ===========================================================================
+  # Acede em: http://localhost:3000
+  # Faz proxy de /api para o api-gateway (interno Docker: api-gateway:8888)
+  # Antes de usar: configurar Keycloak client em http://localhost:8080
+  #   realm=order-platform → Clients → frontend → Valid Redirect URIs: http://localhost:3000/*
+  # ===========================================================================
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_KEYCLOAK_URL: http://localhost:8080
+        VITE_KEYCLOAK_REALM: order-platform
+        VITE_KEYCLOAK_CLIENT_ID: frontend
+        VITE_API_BASE_URL: /api
+    container_name: order-platform-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
 volumes:
   postgres_data:

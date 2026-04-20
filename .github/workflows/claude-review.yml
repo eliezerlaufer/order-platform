@@ -1,0 +1,73 @@
+name: Claude PR Review
+
+# =============================================================================
+# CLAUDE — Revisão automática de Pull Requests
+# =============================================================================
+# Claude analisa o diff do PR e publica comentários inline na UI do GitHub.
+# Não aprova nem rejeita — só revê.
+#
+# Dois modos de uso:
+#   1. Automático: dispara em todo PR aberto/atualizado contra main
+#   2. Manual:     qualquer pessoa escreve "@claude review" num comentário
+#
+# Secret necessário (Settings → Secrets → Actions):
+#   ANTHROPIC_API_KEY → gera em console.anthropic.com → API Keys
+# =============================================================================
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Claude Review
+    runs-on: ubuntu-latest
+
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != '' &&
+       contains(github.event.comment.body, '@claude'))
+
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write   # necessário para OIDC authentication da action
+
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          classify_inline_comments: true   # agrupa comentários por ficheiro na UI
+
+          prompt: |
+            Revê este Pull Request como um senior engineer experiente.
+            O projeto é um sistema de microserviços Java 21 + Spring Boot 3
+            com um frontend React 18 + TypeScript.
+
+            Foca-te em:
+            - Correctness: lógica incorrecta, edge cases não tratados, race conditions
+            - Segurança: injecção SQL, XSS, segredos hardcoded, autenticação/autorização
+            - Padrões do projecto: Outbox pattern, idempotência Kafka (ProcessedEvent),
+              Flyway sem baseline-on-migrate, imutabilidade nos DTOs
+            - Testes: cobertura adequada, Testcontainers nos testes de integração
+            - TypeScript: type safety, sem any implícito, hooks bem definidos
+
+            Para cada problema encontrado indica o ficheiro e linha, explica o problema
+            e sugere a correcção com código quando possível.
+
+            Categoriza cada comentário como:
+            - CRÍTICO: bug ou vulnerabilidade — deve ser corrigido antes do merge
+            - AVISO: problema de qualidade importante mas não bloqueante
+            - SUGESTÃO: melhoria opcional, boas práticas, legibilidade
+
+            No final inclui um resumo com o número de problemas por categoria
+            e uma avaliação geral (aprovado para merge / necessita revisão).
