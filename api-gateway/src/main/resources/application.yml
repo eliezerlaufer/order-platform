@@ -54,7 +54,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: health,info,gateway,metrics,prometheus
   endpoint:
     health:
       probes:
@@ -63,3 +63,19 @@ management:
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+
+# ---------------------------------------------------------------------------
+# OPENTELEMETRY — Traces distribuídos
+# ---------------------------------------------------------------------------
+otel:
+  service:
+    name: api-gateway
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+  traces:
+    exporter: otlp
+  metrics:
+    exporter: none
+  logs:
+    exporter: none

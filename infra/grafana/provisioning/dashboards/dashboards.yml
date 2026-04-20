@@ -1,0 +1,16 @@
+# =============================================================================
+# GRAFANA — Dashboard Provider (provisionamento automático)
+# =============================================================================
+# Carrega automaticamente todos os ficheiros JSON da pasta /dashboards
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  - name: order-platform
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards

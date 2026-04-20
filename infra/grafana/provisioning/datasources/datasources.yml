@@ -1,0 +1,29 @@
+# =============================================================================
+# GRAFANA — Data Sources (provisionamento automático)
+# =============================================================================
+# Estas datasources são criadas automaticamente quando o Grafana arranca.
+# Não é necessário configurar manualmente via UI.
+# =============================================================================
+
+apiVersion: 1
+
+datasources:
+
+  # ---------------------------------------------------------------------------
+  # PROMETHEUS — Métricas de todos os serviços
+  # ---------------------------------------------------------------------------
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  # ---------------------------------------------------------------------------
+  # JAEGER — Traces distribuídos
+  # ---------------------------------------------------------------------------
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: false

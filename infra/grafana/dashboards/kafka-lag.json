@@ -1,0 +1,85 @@
+{
+  "title": "Kafka Consumer Lag — Order Platform",
+  "uid": "kafka-lag",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Consumer Lag por Group + Topic",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 10 },
+      "targets": [
+        {
+          "expr": "sum(spring_kafka_listener_seconds_count) by (name)",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Kafka Listener — Taxa de Processamento (rate 1m)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(spring_kafka_listener_seconds_count[1m])) by (name)",
+          "legendFormat": "{{name}} msg/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Kafka Listener — P99 Latência de Processamento",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(spring_kafka_listener_seconds_bucket[1m])) by (le, name))",
+          "legendFormat": "p99 {{name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Kafka Producer — Taxa de Envio (rate 1m)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(spring_kafka_template_seconds_count[1m])) by (job)",
+          "legendFormat": "{{job}} msg/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Kafka Producer — Erros (rate 1m)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(spring_kafka_template_seconds_count{exception!=\"none\"}[1m])) by (job)",
+          "legendFormat": "{{job}} erros/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    }
+  ]
+}

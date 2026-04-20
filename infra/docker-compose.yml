@@ -9,9 +9,14 @@
 # Portas expostas:
 #   5432  → PostgreSQL
 #   9092  → Kafka (apps Spring Boot ligam aqui: localhost:9092)
-#   9093  → Kafka interno (Kafka UI e outros containers ligam aqui)
 #   8080  → Keycloak admin console
 #   8090  → Kafka UI (abrir no browser: http://localhost:8090)
+#   3000  → Frontend React
+#   4317  → OTel Collector gRPC (apps Spring Boot enviam traces aqui)
+#   4318  → OTel Collector HTTP
+#   16686 → Jaeger UI (abrir no browser: http://localhost:16686)
+#   9090  → Prometheus UI (abrir no browser: http://localhost:9090)
+#   3001  → Grafana (abrir no browser: http://localhost:3001, admin/admin)
 # =============================================================================
 
 services:
@@ -144,5 +149,81 @@ services:
       keycloak:
         condition: service_healthy
 
+  # ===========================================================================
+  # OPENTELEMETRY COLLECTOR — Recebe traces e reencaminha para o Jaeger
+  # ===========================================================================
+  # As apps Spring Boot enviam traces para localhost:4317 (gRPC)
+  # O Collector reencaminha para o Jaeger via OTLP gRPC (jaeger:4317)
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.122.1
+    container_name: order-platform-otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yml"]
+    volumes:
+      - ./otel/otel-collector-config.yml:/etc/otelcol-contrib/config.yml:ro
+    ports:
+      - "4317:4317"   # gRPC — apps Spring Boot enviam traces aqui
+      - "4318:4318"   # HTTP — alternativa HTTP/protobuf
+
+  # ===========================================================================
+  # JAEGER ALL-IN-ONE — UI de traces distribuídos
+  # ===========================================================================
+  # Acede em: http://localhost:16686
+  # Recebe traces do OTel Collector via OTLP gRPC (porta 4317 interna)
+  jaeger:
+    image: jaegertracing/all-in-one:1.65
+    container_name: order-platform-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"   # aceita OTLP além do formato nativo
+    ports:
+      - "16686:16686"   # Jaeger UI
+    depends_on:
+      - otel-collector
+
+  # ===========================================================================
+  # PROMETHEUS — Scrape de métricas dos serviços
+  # ===========================================================================
+  # Acede em: http://localhost:9090
+  # Scrape via /actuator/prometheus de cada serviço (host.docker.internal)
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    container_name: order-platform-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d    # guarda 7 dias de métricas
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    extra_hosts:
+      # Resolve host.docker.internal → IP do host (necessário no Linux)
+      - "host.docker.internal:host-gateway"
+
+  # ===========================================================================
+  # GRAFANA — Dashboards de métricas e traces
+  # ===========================================================================
+  # Acede em: http://localhost:3001 (admin/admin)
+  # Porta 3001 para não colidir com o frontend React (3000)
+  # Datasources e dashboards provisionados automaticamente
+  grafana:
+    image: grafana/grafana:11.6.1
+    container_name: order-platform-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor   # editor TraceQL para Jaeger
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - jaeger
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:

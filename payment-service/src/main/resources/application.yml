@@ -113,3 +113,19 @@ logging:
     org.hibernate.SQL: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [traceId=%X{traceId}] %-5level %logger{36} - %msg%n"
+
+# ---------------------------------------------------------------------------
+# OPENTELEMETRY — Traces distribuídos
+# ---------------------------------------------------------------------------
+otel:
+  service:
+    name: payment-service
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+  traces:
+    exporter: otlp
+  metrics:
+    exporter: none
+  logs:
+    exporter: none
