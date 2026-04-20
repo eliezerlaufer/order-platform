@@ -96,12 +96,19 @@ public class OrderController {
     // =========================================================================
     // GET /api/orders/{id}/status — Consultar estado do pedido
     // =========================================================================
+    @Operation(summary = "Consultar estado do pedido")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado do pedido"),
+        @ApiResponse(responseCode = "404", description = "Pedido não encontrado ou não pertence ao cliente"),
+        @ApiResponse(responseCode = "401", description = "Token JWT em falta ou inválido")
+    })
     @GetMapping("/{id}/status")
     public ResponseEntity<OrderStatus> getOrderStatus(
             @PathVariable UUID id,
             @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
 
-        OrderResponse order = orderService.getOrderById(id);
+        UUID customerId = extractCustomerId(jwt);
+        OrderResponse order = orderService.getOrderByIdForCustomer(id, customerId);
         return ResponseEntity.ok(order.status());
     }
 

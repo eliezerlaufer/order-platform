@@ -15,12 +15,9 @@ name: Claude PR Review
 # =============================================================================
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
-
-  issue_comment:
-    types: [created]
+  # Desativado temporariamente — requer créditos na Anthropic API
+  # Para reativar: descomentar os triggers abaixo e adicionar créditos em console.anthropic.com
+  workflow_dispatch:   # apenas trigger manual enquanto sem créditos
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}

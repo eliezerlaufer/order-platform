@@ -124,8 +124,8 @@ public class OrderService {
         Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        if (order.getCustomerId().equals(customerId)) {
-            throw new OrderCancellationException(orderId, order.getStatus());
+        if (!order.getCustomerId().equals(customerId)) {
+            throw new OrderNotFoundException(orderId);
         }
 
         return OrderResponse.from(order);

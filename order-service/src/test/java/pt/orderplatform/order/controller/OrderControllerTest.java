@@ -144,7 +144,7 @@ class OrderControllerTest {
     void getOrderById_shouldReturn200() throws Exception {
         OrderResponse mockResponse = buildOrderResponse(OrderStatus.PENDING, new BigDecimal("89.99"));
 
-        when(orderService.getOrderById(mockResponse.id())).thenReturn(mockResponse);
+        when(orderService.getOrderByIdForCustomer(mockResponse.id(), customerId)).thenReturn(mockResponse);
 
         mockMvc.perform(get("/api/orders/{id}", mockResponse.id())
                         .with(jwt().jwt(j -> j.subject(customerId.toString()))))
@@ -157,13 +157,12 @@ class OrderControllerTest {
     void getOrderById_shouldReturn404WhenNotFound() throws Exception {
         UUID unknownId = UUID.randomUUID();
 
-        when(orderService.getOrderById(unknownId))
+        when(orderService.getOrderByIdForCustomer(unknownId, customerId))
                 .thenThrow(new OrderNotFoundException(unknownId));
 
         mockMvc.perform(get("/api/orders/{id}", unknownId)
                         .with(jwt().jwt(j -> j.subject(customerId.toString()))))
                 .andExpect(status().isNotFound())
-                // ProblemDetail tem campo "title"
                 .andExpect(jsonPath("$.title").value("Order Not Found"));
     }
 
