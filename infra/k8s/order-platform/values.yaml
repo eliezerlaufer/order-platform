@@ -1,0 +1,207 @@
+# =============================================================================
+# ORDER PLATFORM — Helm Values (defaults)
+# =============================================================================
+# Override with: helm install -f values-minikube.yaml ...
+# =============================================================================
+
+global:
+  namespace: order-platform
+  imagePullPolicy: IfNotPresent
+
+# -----------------------------------------------------------------------------
+# PostgreSQL
+# -----------------------------------------------------------------------------
+postgresql:
+  image:
+    repository: postgres
+    tag: "16-alpine"
+  credentials:
+    username: orderplatform
+    password: orderplatform123
+  databases:
+    - orders_db
+    - inventory_db
+    - payments_db
+    - notifications_db
+    - keycloak_db
+  storage:
+    size: 2Gi
+    storageClassName: ""
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+# -----------------------------------------------------------------------------
+# Kafka (Strimzi)
+# -----------------------------------------------------------------------------
+kafka:
+  replicas: 1
+  version: "3.7.0"
+  storage:
+    type: ephemeral          # ephemeral | persistent-claim
+    size: 5Gi                # only used when type=persistent-claim
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: "1"
+  topics:
+    partitions: 3
+    replicas: 1
+    retentionMs: 604800000   # 7 days
+
+# -----------------------------------------------------------------------------
+# Keycloak
+# -----------------------------------------------------------------------------
+keycloak:
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "26.0"
+  admin:
+    username: admin
+    password: admin
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: "1"
+
+# -----------------------------------------------------------------------------
+# Application Services (shared defaults)
+# -----------------------------------------------------------------------------
+serviceDefaults:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# -----------------------------------------------------------------------------
+# Per-service overrides (merged with serviceDefaults)
+# -----------------------------------------------------------------------------
+orderService:
+  image:
+    repository: order-platform/order-service
+    tag: latest
+  port: 8081
+  database: orders_db
+
+inventoryService:
+  image:
+    repository: order-platform/inventory-service
+    tag: latest
+  port: 8082
+  database: inventory_db
+
+paymentService:
+  image:
+    repository: order-platform/payment-service
+    tag: latest
+  port: 8083
+  database: payments_db
+
+notificationService:
+  image:
+    repository: order-platform/notification-service
+    tag: latest
+  port: 8084
+  database: notifications_db
+
+apiGateway:
+  image:
+    repository: order-platform/api-gateway
+    tag: latest
+  port: 8888
+
+frontend:
+  image:
+    repository: order-platform/frontend
+    tag: latest
+  port: 80
+
+# -----------------------------------------------------------------------------
+# Ingress
+# -----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  host: order-platform.local
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+
+# -----------------------------------------------------------------------------
+# Observability
+# -----------------------------------------------------------------------------
+observability:
+  otelCollector:
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: "0.122.1"
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 250m
+  jaeger:
+    image:
+      repository: jaegertracing/all-in-one
+      tag: "1.65"
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  prometheus:
+    image:
+      repository: prom/prometheus
+      tag: "v3.3.1"
+    retentionDays: 7
+    storage:
+      size: 2Gi
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  grafana:
+    image:
+      repository: grafana/grafana
+      tag: "11.6.1"
+    admin:
+      username: admin
+      password: admin
+    storage:
+      size: 1Gi
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 250m

@@ -1,0 +1,113 @@
+# =============================================================================
+# Kafka Topics — managed by Strimzi Entity Operator
+# =============================================================================
+# Format: <domain>.<entity>.<event>
+# These match the topics defined in CLAUDE.md and the Spring Boot services.
+# =============================================================================
+
+{{- $namespace := .Values.global.namespace }}
+{{- $partitions := .Values.kafka.topics.partitions }}
+{{- $replicas := .Values.kafka.topics.replicas }}
+{{- $retentionMs := .Values.kafka.topics.retentionMs }}
+{{- $labels := include "order-platform.componentLabels" (dict "component" "kafka-topics" "context" $) }}
+
+# --- Order domain -----------------------------------------------------------
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: orders.order.created
+  namespace: {{ $namespace }}
+  labels:
+    strimzi.io/cluster: order-platform-kafka
+    {{- $labels | nindent 4 }}
+spec:
+  partitions: {{ $partitions }}
+  replicas: {{ $replicas }}
+  config:
+    retention.ms: {{ $retentionMs }}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: orders.order.confirmed
+  namespace: {{ $namespace }}
+  labels:
+    strimzi.io/cluster: order-platform-kafka
+    {{- $labels | nindent 4 }}
+spec:
+  partitions: {{ $partitions }}
+  replicas: {{ $replicas }}
+  config:
+    retention.ms: {{ $retentionMs }}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: orders.order.cancelled
+  namespace: {{ $namespace }}
+  labels:
+    strimzi.io/cluster: order-platform-kafka
+    {{- $labels | nindent 4 }}
+spec:
+  partitions: {{ $partitions }}
+  replicas: {{ $replicas }}
+  config:
+    retention.ms: {{ $retentionMs }}
+---
+# --- Inventory domain -------------------------------------------------------
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: inventory.reserved
+  namespace: {{ $namespace }}
+  labels:
+    strimzi.io/cluster: order-platform-kafka
+    {{- $labels | nindent 4 }}
+spec:
+  partitions: {{ $partitions }}
+  replicas: {{ $replicas }}
+  config:
+    retention.ms: {{ $retentionMs }}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: inventory.reservation.failed
+  namespace: {{ $namespace }}
+  labels:
+    strimzi.io/cluster: order-platform-kafka
+    {{- $labels | nindent 4 }}
+spec:
+  partitions: {{ $partitions }}
+  replicas: {{ $replicas }}
+  config:
+    retention.ms: {{ $retentionMs }}
+---
+# --- Payment domain ---------------------------------------------------------
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: payments.payment.processed
+  namespace: {{ $namespace }}
+  labels:
+    strimzi.io/cluster: order-platform-kafka
+    {{- $labels | nindent 4 }}
+spec:
+  partitions: {{ $partitions }}
+  replicas: {{ $replicas }}
+  config:
+    retention.ms: {{ $retentionMs }}
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: payments.payment.failed
+  namespace: {{ $namespace }}
+  labels:
+    strimzi.io/cluster: order-platform-kafka
+    {{- $labels | nindent 4 }}
+spec:
+  partitions: {{ $partitions }}
+  replicas: {{ $replicas }}
+  config:
+    retention.ms: {{ $retentionMs }}

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "order-platform.componentLabels" (dict "component" "keycloak" "context" $) | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "order-platform.componentSelectorLabels" (dict "component" "keycloak" "context" $) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "order-platform.componentLabels" (dict "component" "keycloak" "context" $) | nindent 8 }}
+    spec:
+      containers:
+        - name: keycloak
+          image: "{{ .Values.keycloak.image.repository }}:{{ .Values.keycloak.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command:
+            - /opt/keycloak/bin/kc.sh
+            - start-dev
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: keycloak-config
+            - secretRef:
+                name: keycloak-credentials
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 5
+          resources:
+            requests:
+              memory: {{ .Values.keycloak.resources.requests.memory }}
+              cpu: {{ .Values.keycloak.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.keycloak.resources.limits.memory }}
+              cpu: {{ .Values.keycloak.resources.limits.cpu }}
