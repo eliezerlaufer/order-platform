@@ -1,0 +1,56 @@
+# =============================================================================
+# ORDER PLATFORM — Minikube / kind overrides
+# =============================================================================
+# Usage: helm install order-platform ./infra/k8s/order-platform \
+#          -n order-platform --create-namespace \
+#          -f ./infra/k8s/order-platform/values-minikube.yaml
+# =============================================================================
+
+# Lower resource limits for local development
+serviceDefaults:
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 384Mi
+      cpu: 400m
+  hpa:
+    enabled: false           # disable HPA locally (no metrics-server by default)
+
+postgresql:
+  storage:
+    size: 1Gi
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 384Mi
+      cpu: 400m
+
+kafka:
+  resources:
+    requests:
+      memory: 384Mi
+      cpu: 250m
+    limits:
+      memory: 768Mi
+      cpu: 750m
+
+keycloak:
+  resources:
+    requests:
+      memory: 384Mi
+      cpu: 250m
+    limits:
+      memory: 768Mi
+      cpu: 750m
+
+observability:
+  prometheus:
+    storage:
+      size: 1Gi
+  grafana:
+    storage:
+      size: 512Mi

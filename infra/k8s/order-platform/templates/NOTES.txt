@@ -1,0 +1,39 @@
+=====================================================================
+  ORDER PLATFORM deployed successfully!
+=====================================================================
+
+Namespace: {{ .Values.global.namespace }}
+
+To check pod status:
+  kubectl get pods -n {{ .Values.global.namespace }}
+
+To watch all resources:
+  kubectl get all -n {{ .Values.global.namespace }}
+
+{{- if .Values.ingress.enabled }}
+
+Ingress host: {{ .Values.ingress.host }}
+Add to /etc/hosts (or C:\Windows\System32\drivers\etc\hosts):
+  127.0.0.1  {{ .Values.ingress.host }}
+
+Access points:
+  Frontend:   http://{{ .Values.ingress.host }}/
+  API:        http://{{ .Values.ingress.host }}/api/
+  Keycloak:   http://{{ .Values.ingress.host }}/auth/
+{{- end }}
+
+Port-forward for direct access (without Ingress):
+  kubectl port-forward svc/api-gateway 8888:8888 -n {{ .Values.global.namespace }}
+  kubectl port-forward svc/frontend 3000:80 -n {{ .Values.global.namespace }}
+  kubectl port-forward svc/keycloak 8080:8080 -n {{ .Values.global.namespace }}
+  kubectl port-forward svc/grafana 3001:3000 -n {{ .Values.global.namespace }}
+  kubectl port-forward svc/jaeger 16686:16686 -n {{ .Values.global.namespace }}
+  kubectl port-forward svc/prometheus 9090:9090 -n {{ .Values.global.namespace }}
+
+Kafka topics:
+  kubectl get kafkatopic -n {{ .Values.global.namespace }}
+
+Strimzi Kafka cluster:
+  kubectl get kafka -n {{ .Values.global.namespace }}
+
+=====================================================================
