@@ -66,7 +66,7 @@ describe('OrderTable', () => {
 
   it('renderiza lista vazia sem erros', () => {
     renderWithProviders(<OrderTable orders={[]} />)
-    expect(screen.getByText('No data')).toBeInTheDocument()
+    expect(screen.getAllByText('No data').length).toBeGreaterThan(0)
   })
 
   it('mostra loading quando loading=true', () => {

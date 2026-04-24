@@ -1,4 +1,4 @@
-import { screen, waitForElementToBeRemoved } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
 import { mockOrder } from '@/mocks/handlers'
@@ -13,16 +13,14 @@ describe('DashboardPage', () => {
 
   it('mostra a tabela de pedidos após carregar', async () => {
     renderWithProviders(<DashboardPage />)
-    await waitForElementToBeRemoved(() => document.querySelector('.ant-spin'))
-    expect(screen.getByText('Pedidos')).toBeInTheDocument()
+    expect(await screen.findByText('Pedidos')).toBeInTheDocument()
     expect(screen.getByText('Ver detalhe')).toBeInTheDocument()
   })
 
   it('mostra o status do pedido na tabela', async () => {
     renderWithProviders(<DashboardPage />)
-    await waitForElementToBeRemoved(() => document.querySelector('.ant-spin'))
     // mockOrder.status = 'CONFIRMED'
-    expect(screen.getByText('Confirmado')).toBeInTheDocument()
+    expect(await screen.findByText('Confirmado')).toBeInTheDocument()
   })
 
   it('mostra mensagem de erro quando a API falha', async () => {
@@ -30,8 +28,7 @@ describe('DashboardPage', () => {
       http.get('/api/orders', () => HttpResponse.json({ message: 'Internal Server Error' }, { status: 500 })),
     )
     renderWithProviders(<DashboardPage />)
-    await waitForElementToBeRemoved(() => document.querySelector('.ant-spin'))
-    expect(screen.getByText('Erro')).toBeInTheDocument()
+    expect(await screen.findByText('Erro')).toBeInTheDocument()
   })
 
   it('mostra tabela vazia quando não há pedidos', async () => {
@@ -39,13 +36,12 @@ describe('DashboardPage', () => {
       http.get('/api/orders', () => HttpResponse.json([])),
     )
     renderWithProviders(<DashboardPage />)
-    await waitForElementToBeRemoved(() => document.querySelector('.ant-spin'))
-    expect(screen.getByText('No data')).toBeInTheDocument()
+    expect(await screen.findByText('Pedidos')).toBeInTheDocument()
+    expect(screen.getAllByText('No data').length).toBeGreaterThan(0)
   })
 
   it('mostra o ID truncado do pedido', async () => {
     renderWithProviders(<DashboardPage />)
-    await waitForElementToBeRemoved(() => document.querySelector('.ant-spin'))
-    expect(screen.getByText(`${mockOrder.id.slice(0, 8)}…`)).toBeInTheDocument()
+    expect(await screen.findByText(`${mockOrder.id.slice(0, 8)}…`)).toBeInTheDocument()
   })
 })

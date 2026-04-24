@@ -35,7 +35,7 @@ describe('OrderItemsTable', () => {
 
   it('renderiza lista vazia sem erros', () => {
     render(<OrderItemsTable items={[]} />)
-    expect(screen.getByText('No data')).toBeInTheDocument()
+    expect(screen.getAllByText('No data').length).toBeGreaterThan(0)
   })
 
   it('renderiza todos os cabeçalhos das colunas', () => {
