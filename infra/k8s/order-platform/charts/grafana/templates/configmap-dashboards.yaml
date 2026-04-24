@@ -1,0 +1,246 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "order-platform.componentLabels" (dict "component" "grafana" "context" $) | nindent 4 }}
+data:
+  business-metrics.json: |
+    {
+      "title": "Business Metrics — Order Platform",
+      "uid": "business-metrics",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Orders Created (rate 5m)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"order-service\", uri=~\"/api/orders\", method=\"POST\", status=\"201\"}[5m]))",
+              "legendFormat": "Orders/s"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" } }
+        },
+        {
+          "id": 2,
+          "title": "Order Service — HTTP Error Rate",
+          "type": "timeseries",
+          "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"order-service\", status=~\"5..\"}[5m]))",
+              "legendFormat": "5xx/s"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" } }
+        },
+        {
+          "id": 3,
+          "title": "Payment Service — HTTP Error Rate",
+          "type": "timeseries",
+          "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"payment-service\", status=~\"5..\"}[5m]))",
+              "legendFormat": "5xx/s"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" } }
+        },
+        {
+          "id": 4,
+          "title": "DB Connection Pool — Active Connections",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "hikaricp_connections_active{job=~\"order-service|inventory-service|payment-service|notification-service\"}",
+              "legendFormat": "{{job}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 5,
+          "title": "DB Connection Pool — Pending Threads",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "hikaricp_connections_pending{job=~\"order-service|inventory-service|payment-service|notification-service\"}",
+              "legendFormat": "{{job}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 6,
+          "title": "P99 Latency por Servico",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=~\"order-service|inventory-service|payment-service|notification-service|api-gateway\"}[5m])) by (le, job))",
+              "legendFormat": "p99 {{job}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        }
+      ]
+    }
+  jvm-metrics.json: |
+    {
+      "title": "JVM Metrics — Order Platform",
+      "uid": "jvm-metrics",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "label": "Service",
+            "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+            "query": "label_values(jvm_memory_used_bytes, job)",
+            "current": {},
+            "refresh": 2,
+            "sort": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Heap Used vs Committed",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "jvm_memory_used_bytes{job=\"$service\", area=\"heap\"}", "legendFormat": "Used" },
+            { "expr": "jvm_memory_committed_bytes{job=\"$service\", area=\"heap\"}", "legendFormat": "Committed" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "bytes" } }
+        },
+        {
+          "id": 2,
+          "title": "CPU Usage",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "process_cpu_usage{job=\"$service\"}", "legendFormat": "CPU %" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } }
+        },
+        {
+          "id": 3,
+          "title": "GC Pause Time (rate 1m)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "rate(jvm_gc_pause_seconds_sum{job=\"$service\"}[1m])", "legendFormat": "{{action}} {{cause}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        },
+        {
+          "id": 4,
+          "title": "Threads",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "jvm_threads_live_threads{job=\"$service\"}", "legendFormat": "Live" },
+            { "expr": "jvm_threads_daemon_threads{job=\"$service\"}", "legendFormat": "Daemon" },
+            { "expr": "jvm_threads_peak_threads{job=\"$service\"}", "legendFormat": "Peak" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 5,
+          "title": "HTTP Request Rate (req/s)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(http_server_requests_seconds_count{job=\"$service\"}[1m])) by (uri, method, status)", "legendFormat": "{{method}} {{uri}} {{status}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" } }
+        },
+        {
+          "id": 6,
+          "title": "HTTP P99 Latency",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"$service\"}[1m])) by (le, uri))", "legendFormat": "p99 {{uri}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        }
+      ]
+    }
+  kafka-lag.json: |
+    {
+      "title": "Kafka Consumer Lag — Order Platform",
+      "uid": "kafka-lag",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Consumer Lag por Group + Topic",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 10 },
+          "targets": [
+            { "expr": "sum(spring_kafka_listener_seconds_count) by (name)", "legendFormat": "{{name}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 2,
+          "title": "Kafka Listener — Taxa de Processamento (rate 1m)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(spring_kafka_listener_seconds_count[1m])) by (name)", "legendFormat": "{{name}} msg/s" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 3,
+          "title": "Kafka Listener — P99 Latencia de Processamento",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "histogram_quantile(0.99, sum(rate(spring_kafka_listener_seconds_bucket[1m])) by (le, name))", "legendFormat": "p99 {{name}}" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        },
+        {
+          "id": 4,
+          "title": "Kafka Producer — Taxa de Envio (rate 1m)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 18, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(spring_kafka_template_seconds_count[1m])) by (job)", "legendFormat": "{{job}} msg/s" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        },
+        {
+          "id": 5,
+          "title": "Kafka Producer — Erros (rate 1m)",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 18, "w": 12, "h": 8 },
+          "targets": [
+            { "expr": "sum(rate(spring_kafka_template_seconds_count{exception!=\"none\"}[1m])) by (job)", "legendFormat": "{{job}} erros/s" }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short" } }
+        }
+      ]
+    }

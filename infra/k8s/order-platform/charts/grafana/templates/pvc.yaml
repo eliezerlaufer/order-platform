@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "order-platform.componentLabels" (dict "component" "grafana" "context" $) | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.observability.grafana.storage.size }}
+  {{- if .Values.observability.grafana.storage.storageClassName }}
+  storageClassName: {{ .Values.observability.grafana.storage.storageClassName }}
+  {{- end }}

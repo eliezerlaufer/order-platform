@@ -182,6 +182,7 @@ observability:
     retentionDays: 7
     storage:
       size: 2Gi
+      storageClassName: ""   # leave empty to use cluster default
     resources:
       requests:
         memory: 256Mi
@@ -198,6 +199,7 @@ observability:
       password: admin
     storage:
       size: 1Gi
+      storageClassName: ""   # leave empty to use cluster default
     resources:
       requests:
         memory: 128Mi
