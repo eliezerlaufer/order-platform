@@ -22,6 +22,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 // =============================================================================
@@ -55,8 +56,9 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
         outboxEventRepository.deleteAll();
         paymentRepository.deleteAll();
         processedEventRepository.deleteAll();
-        // por defeito: gateway aprova — cada teste pode sobrescrever
-        when(stripeGateway.charge(any(), any())).thenReturn(true);
+        // lenient: este stub pode ser sobrescrito por @BeforeEach de @Nested
+        // sem lançar UnnecessaryStubbingException (strict stubs)
+        lenient().when(stripeGateway.charge(any(), any())).thenReturn(true);
     }
 
     // =========================================================================
@@ -104,11 +106,17 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
     @DisplayName("Pagamento recusado")
     class PaymentDeclined {
 
+        // Sobrescreve o stub lenient do @BeforeEach externo para todos os testes
+        // deste grupo. Corre DEPOIS do setUp() externo, garantindo que o mock
+        // retorna false quando o listener Kafka processar a mensagem.
+        @BeforeEach
+        void configureDeclinedGateway() {
+            when(stripeGateway.charge(any(), any())).thenReturn(false);
+        }
+
         @Test
         @DisplayName("deve criar Payment com status FAILED quando gateway recusa")
         void shouldCreateFailedPaymentWhenGatewayDeclines() {
-            when(stripeGateway.charge(any(), any())).thenReturn(false);
-
             UUID orderId = UUID.randomUUID();
             String payload = buildInventoryReservedPayload(UUID.randomUUID(), orderId, "75.00");
 
@@ -124,8 +132,6 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("deve criar evento PaymentFailed no outbox quando gateway recusa")
         void shouldCreatePaymentFailedOutboxEvent() {
-            when(stripeGateway.charge(any(), any())).thenReturn(false);
-
             UUID orderId = UUID.randomUUID();
             String payload = buildInventoryReservedPayload(UUID.randomUUID(), orderId, "75.00");
 
