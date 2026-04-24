@@ -6,48 +6,36 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import pt.orderplatform.payment_service.BaseIntegrationTest;
-import pt.orderplatform.payment_service.domain.Payment;
 import pt.orderplatform.payment_service.domain.PaymentStatus;
 import pt.orderplatform.payment_service.repository.OutboxEventRepository;
 import pt.orderplatform.payment_service.repository.PaymentRepository;
 import pt.orderplatform.payment_service.repository.ProcessedEventRepository;
 
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 // =============================================================================
 // PAYMENT SERVICE INTEGRATION TEST
 // =============================================================================
 // Verifica o fluxo completo: mensagem Kafka → PaymentService → DB + Outbox.
 //
-// O StripeGateway é substituído por implementações determinísticas via
-// @TestConfiguration, eliminando a aleatoriedade do mock de produção:
-//   ApprovedStripeGateway  → sempre aprova (testa ramo PROCESSED)
-//   DeclinedStripeGateway  → sempre recusa (testa ramo FAILED)
+// O StripeGateway é mockado via @MockitoBean para eliminar a aleatoriedade:
+//   when(stripeGateway.charge(...)).thenReturn(true)  → testa ramo PROCESSED
+//   when(stripeGateway.charge(...)).thenReturn(false) → testa ramo FAILED
 // =============================================================================
 class PaymentServiceIntegrationTest extends BaseIntegrationTest {
 
-    // =========================================================================
-    // STRIPE GATEWAY DETERMINÍSTICO — substitui o bean de produção nos testes
-    // =========================================================================
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        @Primary
-        public StripeGateway approvedStripeGateway() {
-            return (orderId, amount) -> true; // sempre aprova
-        }
-    }
+    @MockitoBean
+    private StripeGateway stripeGateway;
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
@@ -62,10 +50,12 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
     private ProcessedEventRepository processedEventRepository;
 
     @BeforeEach
-    void cleanUp() {
+    void setUp() {
         outboxEventRepository.deleteAll();
         paymentRepository.deleteAll();
         processedEventRepository.deleteAll();
+        // por defeito: gateway aprova — cada teste pode sobrescrever
+        when(stripeGateway.charge(any(), any())).thenReturn(true);
     }
 
     // =========================================================================
@@ -107,29 +97,44 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
     }
 
     // =========================================================================
-    // PAGAMENTO RECUSADO — override do gateway para recusar
+    // PAGAMENTO RECUSADO (StripeGateway → false)
     // =========================================================================
     @Nested
     @DisplayName("Pagamento recusado")
     class PaymentDeclined {
 
-        @Autowired
-        private StripeGateway stripeGateway;
-
         @Test
         @DisplayName("deve criar Payment com status FAILED quando gateway recusa")
         void shouldCreateFailedPaymentWhenGatewayDeclines() {
-            // Override temporário: injectar gateway que recusa
-            // Como o @TestConfiguration define um gateway que sempre aprova,
-            // testamos o ramo FAILED inserindo diretamente um Payment FAILED.
-            UUID orderId = UUID.randomUUID();
-            Payment payment = Payment.pending(orderId, new BigDecimal("75.00"));
-            payment.markFailed();
-            paymentRepository.save(payment);
+            when(stripeGateway.charge(any(), any())).thenReturn(false);
 
-            Optional<Payment> found = paymentRepository.findByOrderId(orderId);
-            assertThat(found).isPresent();
-            assertThat(found.get().getStatus()).isEqualTo(PaymentStatus.FAILED);
+            UUID orderId = UUID.randomUUID();
+            String payload = buildInventoryReservedPayload(UUID.randomUUID(), orderId, "75.00");
+
+            kafkaTemplate.send(new ProducerRecord<>("inventory.reserved", orderId.toString(), payload));
+
+            await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+                Optional<Payment> payment = paymentRepository.findByOrderId(orderId);
+                assertThat(payment).isPresent();
+                assertThat(payment.get().getStatus()).isEqualTo(PaymentStatus.FAILED);
+            });
+        }
+
+        @Test
+        @DisplayName("deve criar evento PaymentFailed no outbox quando gateway recusa")
+        void shouldCreatePaymentFailedOutboxEvent() {
+            when(stripeGateway.charge(any(), any())).thenReturn(false);
+
+            UUID orderId = UUID.randomUUID();
+            String payload = buildInventoryReservedPayload(UUID.randomUUID(), orderId, "75.00");
+
+            kafkaTemplate.send(new ProducerRecord<>("inventory.reserved", orderId.toString(), payload));
+
+            await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+                var events = outboxEventRepository.findAll();
+                assertThat(events).anyMatch(e -> e.getEventType().equals("PaymentFailed")
+                        && e.getAggregateId().equals(orderId));
+            });
         }
     }
 
