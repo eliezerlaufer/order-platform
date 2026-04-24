@@ -1,0 +1,29 @@
+{{- if .Values.serviceDefaults.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "order-platform.componentLabels" (dict "component" "payment-service" "context" $) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-service
+  minReplicas: {{ .Values.serviceDefaults.hpa.minReplicas }}
+  maxReplicas: {{ .Values.serviceDefaults.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.serviceDefaults.hpa.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.serviceDefaults.hpa.targetMemoryUtilizationPercentage }}
+{{- end }}
