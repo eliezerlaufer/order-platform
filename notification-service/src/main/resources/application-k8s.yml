@@ -1,0 +1,28 @@
+# =============================================================================
+# NOTIFICATION-SERVICE — Kubernetes profile overrides
+# =============================================================================
+# Activated via: SPRING_PROFILES_ACTIVE=k8s
+# =============================================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgresql:5432/notifications_db
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: order-platform-kafka-kafka-bootstrap:9092
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/order-platform
+
+logging:
+  level:
+    pt.orderplatform: INFO
+    org.hibernate.SQL: WARN
+
+otel:
+  exporter:
+    otlp:
+      endpoint: http://otel-collector:4317

@@ -1,0 +1,47 @@
+# =============================================================================
+# API-GATEWAY — Kubernetes profile overrides
+# =============================================================================
+# Activated via: SPRING_PROFILES_ACTIVE=k8s
+# Routes point to K8s service names instead of localhost.
+# =============================================================================
+
+spring:
+  cloud:
+    gateway:
+      mvc:
+        routes:
+          - id: order-service
+            uri: http://order-service:8081
+            predicates:
+              - Path=/api/orders/**
+
+          - id: inventory-service
+            uri: http://inventory-service:8082
+            predicates:
+              - Path=/api/inventory/**
+
+          - id: payment-service
+            uri: http://payment-service:8083
+            predicates:
+              - Path=/api/payments/**
+
+          - id: products
+            uri: http://inventory-service:8082
+            predicates:
+              - Path=/api/products/**
+
+          - id: notification-service
+            uri: http://notification-service:8084
+            predicates:
+              - Path=/api/notifications/**
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/order-platform
+
+otel:
+  exporter:
+    otlp:
+      endpoint: http://otel-collector:4317
