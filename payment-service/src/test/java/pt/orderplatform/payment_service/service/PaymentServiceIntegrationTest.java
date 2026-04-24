@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import pt.orderplatform.payment_service.BaseIntegrationTest;
+import pt.orderplatform.payment_service.domain.Payment;
 import pt.orderplatform.payment_service.domain.PaymentStatus;
 import pt.orderplatform.payment_service.repository.OutboxEventRepository;
 import pt.orderplatform.payment_service.repository.PaymentRepository;
