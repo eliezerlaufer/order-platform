@@ -78,6 +78,15 @@ Format: `<domain>.<entity>.<event>`
 | payments.payment.processed   | payment-service    | order-service, notification        |
 | payments.payment.failed      | payment-service    | order-service, inventory, notification |
 
+## Coding Behavior Guidelines
+
+Apply the **karpathy-guidelines** skill on every implementation task:
+
+1. **Think Before Coding** — surface assumptions, ask if unclear, present tradeoffs
+2. **Simplicity First** — minimum code that solves the problem, nothing speculative
+3. **Surgical Changes** — touch only what the request requires, match existing style
+4. **Goal-Driven Execution** — define verifiable success criteria before starting
+
 ## Common Gotchas
 
 - `api-gateway` runs on **8888**, not 8080 — Keycloak uses 8080
