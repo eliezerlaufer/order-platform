@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "order-platform.componentLabels" (dict "component" "jaeger" "context" $) | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "order-platform.componentSelectorLabels" (dict "component" "jaeger" "context" $) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "order-platform.componentLabels" (dict "component" "jaeger" "context" $) | nindent 8 }}
+    spec:
+      containers:
+        - name: jaeger
+          image: "{{ .Values.observability.jaeger.image.repository }}:{{ .Values.observability.jaeger.image.tag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+          ports:
+            - name: ui
+              containerPort: 16686
+              protocol: TCP
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: ui
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: ui
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: {{ .Values.observability.jaeger.resources.requests.memory }}
+              cpu: {{ .Values.observability.jaeger.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.observability.jaeger.resources.limits.memory }}
+              cpu: {{ .Values.observability.jaeger.resources.limits.cpu }}
