@@ -50,32 +50,26 @@ public class NotificationService {
 
     @KafkaListener(topics = "orders.order.created", groupId = "notification-service")
     @Transactional
-    public void onOrderCreated(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload    = objectMapper.readTree(record.value());
-            UUID eventId        = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId        = UUID.fromString(payload.get("orderId").asText());
-            UUID customerId     = UUID.fromString(payload.get("customerId").asText());
+    public void onOrderCreated(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload    = objectMapper.readTree(record.value());
+        UUID eventId        = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId        = UUID.fromString(payload.get("orderId").asText());
+        UUID customerId     = UUID.fromString(payload.get("customerId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} on orders.order.created — skipping", eventId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            // Guardar contexto para eventos futuros que não trazem customerId
-            if (!orderContextRepository.existsById(orderId)) {
-                orderContextRepository.save(OrderContext.of(orderId, customerId));
-            }
-
-            String message = "Your order %s has been placed successfully.".formatted(orderId);
-            saveAndSend(orderId, customerId, NotificationType.ORDER_CREATED, message);
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} on orders.order.created — skipping", eventId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing orders.order.created (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        if (!orderContextRepository.existsById(orderId)) {
+            orderContextRepository.save(OrderContext.of(orderId, customerId));
+        }
+
+        String message = "Your order %s has been placed successfully.".formatted(orderId);
+        saveAndSend(orderId, customerId, NotificationType.ORDER_CREATED, message);
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -84,27 +78,22 @@ public class NotificationService {
 
     @KafkaListener(topics = "orders.order.cancelled", groupId = "notification-service")
     @Transactional
-    public void onOrderCancelled(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload    = objectMapper.readTree(record.value());
-            UUID eventId        = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId        = UUID.fromString(payload.get("orderId").asText());
-            UUID customerId     = UUID.fromString(payload.get("customerId").asText());
+    public void onOrderCancelled(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload    = objectMapper.readTree(record.value());
+        UUID eventId        = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId        = UUID.fromString(payload.get("orderId").asText());
+        UUID customerId     = UUID.fromString(payload.get("customerId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} on orders.order.cancelled — skipping", eventId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            String message = "Your order %s has been cancelled.".formatted(orderId);
-            saveAndSend(orderId, customerId, NotificationType.ORDER_CANCELLED, message);
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} on orders.order.cancelled — skipping", eventId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing orders.order.cancelled (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        String message = "Your order %s has been cancelled.".formatted(orderId);
+        saveAndSend(orderId, customerId, NotificationType.ORDER_CANCELLED, message);
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -113,29 +102,24 @@ public class NotificationService {
 
     @KafkaListener(topics = "payments.payment.processed", groupId = "notification-service")
     @Transactional
-    public void onPaymentProcessed(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId     = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId     = UUID.fromString(payload.get("orderId").asText());
+    public void onPaymentProcessed(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId     = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId     = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} on payments.payment.processed — skipping", eventId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            resolveCustomer(orderId).ifPresent(customerId -> {
-                String message = "Payment for order %s has been approved.".formatted(orderId);
-                saveAndSend(orderId, customerId, NotificationType.PAYMENT_PROCESSED, message);
-            });
-
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} on payments.payment.processed — skipping", eventId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing payments.payment.processed (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        resolveCustomer(orderId).ifPresent(customerId -> {
+            String message = "Payment for order %s has been approved.".formatted(orderId);
+            saveAndSend(orderId, customerId, NotificationType.PAYMENT_PROCESSED, message);
+        });
+
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -144,29 +128,24 @@ public class NotificationService {
 
     @KafkaListener(topics = "payments.payment.failed", groupId = "notification-service")
     @Transactional
-    public void onPaymentFailed(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId     = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId     = UUID.fromString(payload.get("orderId").asText());
+    public void onPaymentFailed(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId     = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId     = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} on payments.payment.failed — skipping", eventId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            resolveCustomer(orderId).ifPresent(customerId -> {
-                String message = "Payment for order %s was declined. Please review your payment details.".formatted(orderId);
-                saveAndSend(orderId, customerId, NotificationType.PAYMENT_FAILED, message);
-            });
-
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} on payments.payment.failed — skipping", eventId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing payments.payment.failed (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        resolveCustomer(orderId).ifPresent(customerId -> {
+            String message = "Payment for order %s was declined. Please review your payment details.".formatted(orderId);
+            saveAndSend(orderId, customerId, NotificationType.PAYMENT_FAILED, message);
+        });
+
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -175,29 +154,24 @@ public class NotificationService {
 
     @KafkaListener(topics = "inventory.reservation.failed", groupId = "notification-service")
     @Transactional
-    public void onInventoryReservationFailed(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId     = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId     = UUID.fromString(payload.get("orderId").asText());
+    public void onInventoryReservationFailed(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId     = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId     = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} on inventory.reservation.failed — skipping", eventId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            resolveCustomer(orderId).ifPresent(customerId -> {
-                String message = "Sorry, one or more items in order %s are out of stock. Your order has been cancelled.".formatted(orderId);
-                saveAndSend(orderId, customerId, NotificationType.STOCK_UNAVAILABLE, message);
-            });
-
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} on inventory.reservation.failed — skipping", eventId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing inventory.reservation.failed (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        resolveCustomer(orderId).ifPresent(customerId -> {
+            String message = "Sorry, one or more items in order %s are out of stock. Your order has been cancelled.".formatted(orderId);
+            saveAndSend(orderId, customerId, NotificationType.STOCK_UNAVAILABLE, message);
+        });
+
+        ack.acknowledge();
     }
 
     // =========================================================================

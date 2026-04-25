@@ -46,47 +46,40 @@ public class OrderEventListener {
     // =========================================================================
     @KafkaListener(topics = "orders.order.created", groupId = "inventory-service")
     @Transactional
-    public void onOrderCreated(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId   = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId   = UUID.fromString(payload.get("orderId").asText());
-            BigDecimal totalAmount = new BigDecimal(payload.get("totalAmount").asText());
+    public void onOrderCreated(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId   = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId   = UUID.fromString(payload.get("orderId").asText());
+        BigDecimal totalAmount = new BigDecimal(payload.get("totalAmount").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} for order {} on orders.order.created — skipping", eventId, orderId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            List<ReservationLine> lines = new ArrayList<>();
-            for (JsonNode item : payload.get("items")) {
-                UUID productId = UUID.fromString(item.get("productId").asText());
-                int  quantity  = item.get("quantity").asInt();
-                lines.add(new ReservationLine(productId, quantity));
-            }
-
-            ReservationOutcome outcome = reservationService.reserveForOrder(orderId, lines);
-
-            if (outcome instanceof ReservationOutcome.Success) {
-                String outboxPayload = buildReservedPayload(orderId, totalAmount);
-                outboxEventRepository.save(OutboxEvent.of("Inventory", orderId, "InventoryReserved", outboxPayload));
-                log.info("InventoryReserved outbox event created for order {}", orderId);
-
-            } else if (outcome instanceof ReservationOutcome.Failure failure) {
-                String outboxPayload = buildFailedPayload(orderId, failure.reason());
-                outboxEventRepository.save(OutboxEvent.of("Inventory", orderId, "InventoryReservationFailed", outboxPayload));
-                log.warn("InventoryReservationFailed for order {}: {}", orderId, failure.reason());
-            }
-
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} for order {} on orders.order.created — skipping", eventId, orderId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing orders.order.created (offset={}): {}", record.offset(), ex.getMessage(), ex);
-            // Não ack — o Kafka re-entrega a mensagem depois de restart/rebalance.
-            // Em produção, considerar um Dead Letter Topic para evitar poison pills.
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        List<ReservationLine> lines = new ArrayList<>();
+        for (JsonNode item : payload.get("items")) {
+            UUID productId = UUID.fromString(item.get("productId").asText());
+            int  quantity  = item.get("quantity").asInt();
+            lines.add(new ReservationLine(productId, quantity));
+        }
+
+        ReservationOutcome outcome = reservationService.reserveForOrder(orderId, lines);
+
+        if (outcome instanceof ReservationOutcome.Success) {
+            String outboxPayload = buildReservedPayload(orderId, totalAmount);
+            outboxEventRepository.save(OutboxEvent.of("Inventory", orderId, "InventoryReserved", outboxPayload));
+            log.info("InventoryReserved outbox event created for order {}", orderId);
+
+        } else if (outcome instanceof ReservationOutcome.Failure failure) {
+            String outboxPayload = buildFailedPayload(orderId, failure.reason());
+            outboxEventRepository.save(OutboxEvent.of("Inventory", orderId, "InventoryReservationFailed", outboxPayload));
+            log.warn("InventoryReservationFailed for order {}: {}", orderId, failure.reason());
+        }
+
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -94,33 +87,28 @@ public class OrderEventListener {
     // =========================================================================
     @KafkaListener(topics = {"orders.order.cancelled", "payments.payment.failed"}, groupId = "inventory-service")
     @Transactional
-    public void onReleaseStock(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId = UUID.fromString(payload.get("orderId").asText());
+    public void onReleaseStock(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} for order {} on {} — skipping", eventId, orderId, record.topic());
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            List<UUID> released = reservationService.releaseForOrder(orderId);
-
-            if (!released.isEmpty()) {
-                String outboxPayload = buildReleasedPayload(orderId);
-                outboxEventRepository.save(OutboxEvent.of("Inventory", orderId, "InventoryReleased", outboxPayload));
-                log.info("InventoryReleased {} product(s) for order {} (topic={})",
-                        released.size(), orderId, record.topic());
-            }
-
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} for order {} on {} — skipping", eventId, orderId, record.topic());
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing {} (offset={}): {}", record.topic(), record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        List<UUID> released = reservationService.releaseForOrder(orderId);
+
+        if (!released.isEmpty()) {
+            String outboxPayload = buildReleasedPayload(orderId);
+            outboxEventRepository.save(OutboxEvent.of("Inventory", orderId, "InventoryReleased", outboxPayload));
+            log.info("InventoryReleased {} product(s) for order {} (topic={})",
+                    released.size(), orderId, record.topic());
+        }
+
+        ack.acknowledge();
     }
 
     // =========================================================================

@@ -8,6 +8,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Duration;
+
 // =============================================================================
 // BASE INTEGRATION TEST — classe base para todos os testes de integração
 // =============================================================================
@@ -51,7 +53,8 @@ public abstract class BaseIntegrationTest {
     // KAFKA CONTAINER
     // -------------------------------------------------------------------------
     static final KafkaContainer kafka =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"))
+                    .withStartupTimeout(Duration.ofMinutes(3));
 
     // Iniciar containers uma única vez para toda a JVM de testes
     static {

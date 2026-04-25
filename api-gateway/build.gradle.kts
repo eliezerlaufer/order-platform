@@ -20,6 +20,8 @@ repositories {
 extra["springCloudVersion"] = "2025.0.2"
 
 dependencies {
+	// Rate limiting — token bucket por IP (sem dependências externas além da JVM)
+	implementation("com.bucket4j:bucket4j-core:8.10.1")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	// Prometheus: expõe /actuator/prometheus para scraping
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
