@@ -11,8 +11,8 @@ A microservices-based order management platform built with Spring Boot, React, K
 - **API Gateway**: Centralized entry point for all services.
 - **Frontend**: React 18 + TypeScript UI with Ant Design.
 - **Authentication**: Keycloak integration for user management.
-- **Observability**: OpenTelemetry traces, Prometheus metrics, and Grafana dashboards (planned for Phase 5).
-- **Deployment**: Kubernetes + Helm charts (planned for Phase 6).
+- **Observability**: OpenTelemetry traces, Prometheus metrics, and Grafana dashboards.
+- **Deployment**: Kubernetes + Helm charts with Strimzi for Kafka.
 
 ## Architecture
 
@@ -126,8 +126,9 @@ Branch naming:
 - [x] Phase 2: inventory-service (Kafka listener, stock reservation)
 - [x] Phase 3: payment-service + notification-service
 - [x] Phase 4: React 18 + TypeScript + Vite frontend (Ant Design, Keycloak, TanStack Query)
-- [ ] Phase 5: Observability (OpenTelemetry traces + Prometheus metrics + Grafana dashboards)
-- [ ] Phase 6: Kubernetes + Strimzi (Kafka on K8s) + Helm charts
+- [x] Phase 5: Observability (OpenTelemetry traces + Prometheus metrics + Grafana dashboards)
+- [x] Phase 6: Kubernetes + Strimzi (Kafka on K8s) + Helm charts
+- [x] Phase 7: Testing — 80%+ coverage (Testcontainers integration tests + Vitest/MSW frontend tests)
 
 ## Contributing
 
