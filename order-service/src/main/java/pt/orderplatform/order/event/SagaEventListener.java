@@ -41,29 +41,25 @@ public class SagaEventListener {
     // =========================================================================
     @KafkaListener(topics = "inventory.reserved", groupId = "order-service")
     @Transactional
-    public void onInventoryReserved(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId = UUID.fromString(payload.get("orderId").asText());
+    public void onInventoryReserved(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} for order {} on inventory.reserved — skipping", eventId, orderId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            orderService.confirmOrderBySaga(orderId);
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} for order {} on inventory.reserved — skipping", eventId, orderId);
             ack.acknowledge();
-
-        } catch (IllegalStateException ex) {
-            // Order já transitou para estado terminal (ex: cancelada pelo user) — ack e seguir
-            log.warn("Cannot confirm order (state conflict): {}", ex.getMessage());
-            ack.acknowledge();
-        } catch (Exception ex) {
-            log.error("Error processing inventory.reserved (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        try {
+            orderService.confirmOrderBySaga(orderId);
+        } catch (IllegalStateException ex) {
+            // Order já transitou para estado terminal — ack sem retry
+            log.warn("Cannot confirm order (state conflict): {}", ex.getMessage());
+        }
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -71,28 +67,24 @@ public class SagaEventListener {
     // =========================================================================
     @KafkaListener(topics = "inventory.reservation.failed", groupId = "order-service")
     @Transactional
-    public void onInventoryReservationFailed(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId = UUID.fromString(payload.get("orderId").asText());
+    public void onInventoryReservationFailed(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} for order {} on inventory.reservation.failed — skipping", eventId, orderId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            orderService.cancelOrderBySaga(orderId);
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} for order {} on inventory.reservation.failed — skipping", eventId, orderId);
             ack.acknowledge();
+            return;
+        }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
 
+        try {
+            orderService.cancelOrderBySaga(orderId);
         } catch (IllegalStateException ex) {
             log.warn("Cannot cancel order (state conflict): {}", ex.getMessage());
-            ack.acknowledge();
-        } catch (Exception ex) {
-            log.error("Error processing inventory.reservation.failed (offset={}): {}", record.offset(), ex.getMessage(), ex);
         }
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -100,25 +92,20 @@ public class SagaEventListener {
     // =========================================================================
     @KafkaListener(topics = "payments.payment.processed", groupId = "order-service")
     @Transactional
-    public void onPaymentProcessed(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId = UUID.fromString(payload.get("orderId").asText());
+    public void onPaymentProcessed(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} for order {} on payments.payment.processed — skipping", eventId, orderId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            log.info("Payment processed for order {} — order already CONFIRMED, no state change needed", orderId);
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} for order {} on payments.payment.processed — skipping", eventId, orderId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing payments.payment.processed (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        log.info("Payment processed for order {} — order already CONFIRMED, no state change needed", orderId);
+        ack.acknowledge();
     }
 
     // =========================================================================
@@ -126,27 +113,23 @@ public class SagaEventListener {
     // =========================================================================
     @KafkaListener(topics = "payments.payment.failed", groupId = "order-service")
     @Transactional
-    public void onPaymentFailed(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload = objectMapper.readTree(record.value());
-            UUID eventId = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId = UUID.fromString(payload.get("orderId").asText());
+    public void onPaymentFailed(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload = objectMapper.readTree(record.value());
+        UUID eventId = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId = UUID.fromString(payload.get("orderId").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} for order {} on payments.payment.failed — skipping", eventId, orderId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            orderService.cancelOrderBySaga(orderId);
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} for order {} on payments.payment.failed — skipping", eventId, orderId);
             ack.acknowledge();
+            return;
+        }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
 
+        try {
+            orderService.cancelOrderBySaga(orderId);
         } catch (IllegalStateException ex) {
             log.warn("Cannot cancel order after payment failure (state conflict): {}", ex.getMessage());
-            ack.acknowledge();
-        } catch (Exception ex) {
-            log.error("Error processing payments.payment.failed (offset={}): {}", record.offset(), ex.getMessage(), ex);
         }
+        ack.acknowledge();
     }
 }

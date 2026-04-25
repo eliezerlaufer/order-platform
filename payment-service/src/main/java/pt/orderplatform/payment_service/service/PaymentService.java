@@ -50,45 +50,40 @@ public class PaymentService {
 
     @KafkaListener(topics = "inventory.reserved", groupId = "payment-service")
     @Transactional
-    public void onInventoryReserved(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        try {
-            JsonNode payload    = objectMapper.readTree(record.value());
-            UUID eventId        = UUID.fromString(payload.get("eventId").asText());
-            UUID orderId        = UUID.fromString(payload.get("orderId").asText());
-            BigDecimal amount   = new BigDecimal(payload.get("totalAmount").asText());
+    public void onInventoryReserved(ConsumerRecord<String, String> record, Acknowledgment ack) throws Exception {
+        JsonNode payload    = objectMapper.readTree(record.value());
+        UUID eventId        = UUID.fromString(payload.get("eventId").asText());
+        UUID orderId        = UUID.fromString(payload.get("orderId").asText());
+        BigDecimal amount   = new BigDecimal(payload.get("totalAmount").asText());
 
-            if (processedEventRepository.existsById(eventId)) {
-                log.info("Duplicate event {} for order {} on inventory.reserved — skipping", eventId, orderId);
-                ack.acknowledge();
-                return;
-            }
-            processedEventRepository.save(ProcessedEvent.of(eventId));
-
-            Payment payment = Payment.pending(orderId, amount);
-            paymentRepository.save(payment);
-            log.info("Payment PENDING created for order {} amount={}", orderId, amount);
-
-            boolean approved = stripeGateway.charge(orderId, amount);
-
-            if (approved) {
-                payment.markProcessed();
-                paymentRepository.save(payment);
-                String outboxPayload = buildProcessedPayload(orderId, amount);
-                outboxEventRepository.save(OutboxEvent.of("Payment", orderId, "PaymentProcessed", outboxPayload));
-                log.info("Payment PROCESSED for order {}", orderId);
-            } else {
-                payment.markFailed();
-                paymentRepository.save(payment);
-                String outboxPayload = buildFailedPayload(orderId);
-                outboxEventRepository.save(OutboxEvent.of("Payment", orderId, "PaymentFailed", outboxPayload));
-                log.warn("Payment FAILED for order {}", orderId);
-            }
-
+        if (processedEventRepository.existsById(eventId)) {
+            log.info("Duplicate event {} for order {} on inventory.reserved — skipping", eventId, orderId);
             ack.acknowledge();
-
-        } catch (Exception ex) {
-            log.error("Error processing inventory.reserved (offset={}): {}", record.offset(), ex.getMessage(), ex);
+            return;
         }
+        processedEventRepository.save(ProcessedEvent.of(eventId));
+
+        Payment payment = Payment.pending(orderId, amount);
+        paymentRepository.save(payment);
+        log.info("Payment PENDING created for order {} amount={}", orderId, amount);
+
+        boolean approved = stripeGateway.charge(orderId, amount);
+
+        if (approved) {
+            payment.markProcessed();
+            paymentRepository.save(payment);
+            String outboxPayload = buildProcessedPayload(orderId, amount);
+            outboxEventRepository.save(OutboxEvent.of("Payment", orderId, "PaymentProcessed", outboxPayload));
+            log.info("Payment PROCESSED for order {}", orderId);
+        } else {
+            payment.markFailed();
+            paymentRepository.save(payment);
+            String outboxPayload = buildFailedPayload(orderId);
+            outboxEventRepository.save(OutboxEvent.of("Payment", orderId, "PaymentFailed", outboxPayload));
+            log.warn("Payment FAILED for order {}", orderId);
+        }
+
+        ack.acknowledge();
     }
 
     // =========================================================================
