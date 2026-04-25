@@ -5,7 +5,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.test.utils.ContainerTestUtils;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import pt.orderplatform.payment_service.BaseIntegrationTest;
 import pt.orderplatform.payment_service.domain.Payment;
@@ -45,6 +47,9 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
     private KafkaTemplate<String, String> kafkaTemplate;
 
     @Autowired
+    private KafkaListenerEndpointRegistry kafkaListenerEndpointRegistry;
+
+    @Autowired
     private PaymentRepository paymentRepository;
 
     @Autowired
@@ -54,7 +59,10 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
     private ProcessedEventRepository processedEventRepository;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws InterruptedException {
+        for (var container : kafkaListenerEndpointRegistry.getListenerContainers()) {
+            ContainerTestUtils.waitForAssignment(container, 1);
+        }
         outboxEventRepository.deleteAll();
         paymentRepository.deleteAll();
         processedEventRepository.deleteAll();
