@@ -54,4 +54,30 @@ class NotificationControllerTest extends BaseIntegrationTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void shouldReturnNotificationsByCustomerId() throws Exception {
+        UUID orderId    = UUID.randomUUID();
+        UUID customerId = UUID.randomUUID();
+        notificationRepository.save(Notification.of(orderId, customerId, NotificationType.ORDER_CREATED,
+                "Your order has been placed."));
+        notificationRepository.save(Notification.of(UUID.randomUUID(), customerId, NotificationType.PAYMENT_PROCESSED,
+                "Payment approved."));
+
+        mockMvc.perform(get("/api/notifications/customer/{customerId}", customerId)
+                        .with(jwt())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].customerId").value(customerId.toString()));
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenNoNotificationsForCustomer() throws Exception {
+        mockMvc.perform(get("/api/notifications/customer/{customerId}", UUID.randomUUID())
+                        .with(jwt())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
 }

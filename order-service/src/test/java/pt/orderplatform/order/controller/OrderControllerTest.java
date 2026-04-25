@@ -13,6 +13,7 @@ import pt.orderplatform.order.domain.OrderStatus;
 import pt.orderplatform.order.dto.CreateOrderRequest;
 import pt.orderplatform.order.dto.OrderItemRequest;
 import pt.orderplatform.order.dto.OrderResponse;
+import pt.orderplatform.order.exception.OrderCancellationException;
 import pt.orderplatform.order.exception.OrderNotFoundException;
 import pt.orderplatform.order.service.OrderService;
 
@@ -182,6 +183,34 @@ class OrderControllerTest {
                         .with(jwt().jwt(j -> j.subject(customerId.toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/orders/{id} → 422 quando cancelamento não é permitido")
+    void cancelOrder_shouldReturn422WhenCancellationNotAllowed() throws Exception {
+        UUID orderId = UUID.randomUUID();
+
+        when(orderService.cancelOrder(orderId, customerId))
+                .thenThrow(new OrderCancellationException(orderId, OrderStatus.CANCELLED));
+
+        mockMvc.perform(delete("/api/orders/{id}", orderId)
+                        .with(jwt().jwt(j -> j.subject(customerId.toString()))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.title").value("Order Cancellation Not Allowed"));
+    }
+
+    @Test
+    @DisplayName("GET /api/orders → 200 com lista de pedidos do cliente")
+    void getOrdersByCustomer_shouldReturn200() throws Exception {
+        OrderResponse order1 = buildOrderResponse(OrderStatus.PENDING, new BigDecimal("89.99"));
+        OrderResponse order2 = buildOrderResponse(OrderStatus.CONFIRMED, new BigDecimal("49.99"));
+
+        when(orderService.getOrdersByCustomer(customerId)).thenReturn(List.of(order1, order2));
+
+        mockMvc.perform(get("/api/orders")
+                        .with(jwt().jwt(j -> j.subject(customerId.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     // =========================================================================
