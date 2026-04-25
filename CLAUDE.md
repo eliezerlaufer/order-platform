@@ -31,8 +31,9 @@ git checkout -b feature/<service>-<description>
 - [x] FASE 2 — inventory-service (Kafka listener, stock reservation)
 - [x] FASE 3 — payment-service + notification-service
 - [x] FASE 4 — React 18 + TypeScript + Vite frontend (Ant Design, Keycloak, TanStack Query)
-- [ ] FASE 5 — Observability (OpenTelemetry traces + Prometheus metrics + Grafana dashboards)
-- [ ] FASE 6 — Kubernetes + Strimzi (Kafka on K8s) + Helm charts
+- [x] FASE 5 — Observability (OpenTelemetry traces + Prometheus metrics + Grafana dashboards)
+- [x] FASE 6 — Kubernetes + Strimzi (Kafka on K8s) + Helm charts
+- [x] FASE 7 — Testing 80%+ (Testcontainers backend + Vitest/MSW frontend)
 
 ## Services & Ports
 
@@ -93,3 +94,4 @@ Apply the **karpathy-guidelines** skill on every implementation task:
 - `notification-service` has no Kafka producer — pure consumer, no outbox
 - `ProductResponse` has no `unitPrice` field — frontend must ask user for price on order creation
 - Frontend `VITE_*` env vars are **build-time only** — changes require rebuild, not restart
+- `@Nested` + `@MockitoBean` + Kafka listener tests = múltiplos Spring contexts = múltiplos consumers no mesmo group = flakiness; usar classe plana em vez de `@Nested`

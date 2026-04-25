@@ -22,6 +22,9 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import pt.orderplatform.inventory.exception.InsufficientStockException;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -147,6 +150,49 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RestockRequest(0))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/products → 409 quando SKU duplicado (DataIntegrityViolationException)")
+    void create_shouldReturn409WhenDuplicateSku() throws Exception {
+        CreateProductRequest request = new CreateProductRequest("Teclado", "KBD-001", 100);
+        when(productService.create(any(CreateProductRequest.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        mockMvc.perform(post("/api/products")
+                        .with(jwt().jwt(j -> j.subject(adminId.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Conflict"));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/products/{id}/restock → 400 quando argumento inválido")
+    void restock_shouldReturn400WhenIllegalArgument() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(productService.restock(eq(id), any(RestockRequest.class)))
+                .thenThrow(new IllegalArgumentException("quantity must be positive"));
+
+        mockMvc.perform(patch("/api/products/{id}/restock", id)
+                        .with(jwt().jwt(j -> j.subject(adminId.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RestockRequest(10))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Bad Request"));
+    }
+
+    @Test
+    @DisplayName("GET /api/products/{id} → 409 quando stock insuficiente simulado")
+    void findById_shouldReturn409WhenInsufficientStock() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(productService.findById(id))
+                .thenThrow(new InsufficientStockException(id, 10, 5));
+
+        mockMvc.perform(get("/api/products/{id}", id)
+                        .with(jwt().jwt(j -> j.subject(adminId.toString()))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Insufficient Stock"));
     }
 
     private ProductResponse sampleResponse() {
