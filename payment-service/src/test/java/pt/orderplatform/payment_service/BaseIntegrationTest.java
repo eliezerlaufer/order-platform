@@ -8,6 +8,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Duration;
+
 // =============================================================================
 // BASE INTEGRATION TEST — PostgreSQL + Kafka reais via Testcontainers
 // =============================================================================
@@ -22,7 +24,8 @@ public abstract class BaseIntegrationTest {
                     .withPassword("test");
 
     static final KafkaContainer kafka =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.0"))
+                    .withStartupTimeout(Duration.ofMinutes(3));
 
     static {
         postgres.start();
