@@ -9,7 +9,7 @@ plugins {
     // Cada subprojeto escolhe se quer aplicá-lo.
     id("org.springframework.boot") version "3.5.0" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
-    kotlin("jvm") version "2.3.20" apply false  // Kotlin DSL nos build scripts
+    kotlin("jvm") version "2.3.21" apply false  // Kotlin DSL nos build scripts
     // SonarCloud — aplicado na raiz para análise multi-módulo
     id("org.sonarqube") version "5.1.0.4882"
 }
