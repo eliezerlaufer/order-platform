@@ -7,7 +7,7 @@
 plugins {
     // O `apply false` significa: declaro o plugin aqui mas não o aplico na raiz.
     // Cada subprojeto escolhe se quer aplicá-lo.
-    id("org.springframework.boot") version "3.5.0" apply false
+    id("org.springframework.boot") version "4.0.6" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     kotlin("jvm") version "2.3.21" apply false  // Kotlin DSL nos build scripts
     // SonarCloud — aplicado na raiz para análise multi-módulo
@@ -47,7 +47,7 @@ subprojects {
     the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
         imports {
             // Spring Boot BOM — define versões de todas as libs Spring
-            mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.0")
+            mavenBom("org.springframework.boot:spring-boot-dependencies:4.0.6")
         }
         dependencies {
             // OpenTelemetry — traces distribuídos
