@@ -80,7 +80,7 @@ jobs:
       # 3. Gradle cache — key on all .kts files + wrapper properties
       #    Speeds up subsequent runs from ~3 min to ~30 sec
       - name: Cache Gradle packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
