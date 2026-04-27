@@ -70,7 +70,7 @@ jobs:
 
       # Upload JARs so the matrix Docker jobs can download them
       - name: Upload JARs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: service-jars
           path: |
