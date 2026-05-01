@@ -129,7 +129,7 @@ otel:
     name: inventory-service
   exporter:
     otlp:
-      endpoint: http://localhost:4317
+      endpoint: http://localhost:4318
   traces:
     exporter: otlp
   metrics:
