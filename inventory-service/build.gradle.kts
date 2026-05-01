@@ -48,7 +48,7 @@ dependencies {
     // --- OBSERVABILIDADE ---
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
-    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.27.0")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter")
     // Prometheus: expõe /actuator/prometheus para scraping
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 

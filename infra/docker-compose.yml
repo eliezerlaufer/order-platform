@@ -36,11 +36,6 @@ services:
       - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
     ports:
       - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U orderplatform"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ===========================================================================
   # KAFKA — Message broker (KRaft mode, sem Zookeeper)
@@ -57,34 +52,31 @@ services:
   # O Kafka UI usa:           bootstrapServers: kafka:29092
   # ===========================================================================
   kafka:
-    image: bitnami/kafka:3.7
+    image: apache/kafka:3.9.1
     container_name: order-platform-kafka
     environment:
       # KRaft mode — Kafka sem Zookeeper (padrão desde Kafka 3.3)
-      KAFKA_CFG_NODE_ID: 0
-      KAFKA_CFG_PROCESS_ROLES: controller,broker
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9094
+      KAFKA_NODE_ID: 0
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9094
 
       # Dois listeners: INTERNAL para Docker, EXTERNAL para o host
-      KAFKA_CFG_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
       # Configuração para ambiente local (replicação mínima)
-      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+      # Cluster ID obrigatório para KRaft no apache/kafka
+      CLUSTER_ID: "order-platform-kafka-cluster"
     ports:
       - "9092:9092"   # porta externa para as apps Spring Boot
-    healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
 
   # ===========================================================================
   # KAFKA UI — Interface visual para explorar topics e mensagens
@@ -95,8 +87,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: order-platform-kafka-ui
     depends_on:
-      kafka:
-        condition: service_healthy
+      - kafka
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
@@ -119,12 +110,6 @@ services:
     command: start-dev
     ports:
       - "8080:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
-      interval: 20s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
 
   # ===========================================================================
   # FRONTEND — React 18 + Vite SPA servida via nginx
@@ -145,9 +130,10 @@ services:
     container_name: order-platform-frontend
     ports:
       - "3000:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
-      keycloak:
-        condition: service_healthy
+      - keycloak
 
   # ===========================================================================
   # OPENTELEMETRY COLLECTOR — Recebe traces e reencaminha para o Jaeger
@@ -170,7 +156,7 @@ services:
   # Acede em: http://localhost:16686
   # Recebe traces do OTel Collector via OTLP gRPC (porta 4317 interna)
   jaeger:
-    image: jaegertracing/all-in-one:1.65
+    image: jaegertracing/all-in-one:1.65.0
     container_name: order-platform-jaeger
     environment:
       COLLECTOR_OTLP_ENABLED: "true"   # aceita OTLP além do formato nativo

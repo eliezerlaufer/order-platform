@@ -136,7 +136,7 @@ otel:
     name: order-service
   exporter:
     otlp:
-      endpoint: http://localhost:4317   # OTel Collector (gRPC)
+      endpoint: http://localhost:4318   # OTel Collector (HTTP/protobuf)
   traces:
     exporter: otlp    # envia traces para o OTel Collector → Jaeger
   metrics:
