@@ -11,7 +11,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7" apply false
     kotlin("jvm") version "2.3.21" apply false  // Kotlin DSL nos build scripts
     // SonarCloud — aplicado na raiz para análise multi-módulo
-    id("org.sonarqube") version "5.1.0.4882"
+    id("org.sonarqube") version "7.3.0.8198"
 }
 
 // =============================================================================
