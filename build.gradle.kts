@@ -49,7 +49,7 @@ subprojects {
             // Spring Boot BOM — define versões de todas as libs Spring
             mavenBom("org.springframework.boot:spring-boot-dependencies:3.5.0")
             // OpenTelemetry Instrumentation BOM — alinha versões de todas as libs OTel
-            mavenBom("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.14.0")
+            mavenBom("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.27.0")
         }
     }
 
