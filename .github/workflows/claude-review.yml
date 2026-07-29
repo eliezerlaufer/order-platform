@@ -40,7 +40,7 @@ jobs:
       id-token: write   # necessário para OIDC authentication da action
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1   # apenas o commit mais recente (suficiente para o review)
 
